@@ -372,7 +372,21 @@ async function initCloud(){
  }
 })
 }
-async function cloudSignIn(){if(!sxSupabase){authMsg('Configure config.js first.');return}const {error}=await sxSupabase.auth.signInWithPassword({email:val('authEmail'),password:val('authPassword')});if(error)authMsg(error.message);else closeAuth()}
+async function cloudSignIn(){
+  if(!sxSupabase){authMsg('Configure config.js first.');return}
+  try{
+    authMsg('Signing in…');
+    const {error}=await sxSupabase.auth.signInWithPassword({
+      email:val('authEmail').trim(),
+      password:val('authPassword')
+    });
+    if(error){authMsg(error.message);return}
+    authMsg('');
+    closeAuth();
+  }catch(e){
+    authMsg('SIGN-IN ERROR: '+(e?.message||String(e)));
+  }
+}
 async function cloudSignUp(){if(!sxSupabase){authMsg('Configure config.js first.');return}const {error}=await sxSupabase.auth.signUp({email:val('authEmail'),password:val('authPassword')});authMsg(error?error.message:'Account created. Check email if confirmation is enabled.')}
 async function cloudForgotPassword(){
  if(!sxSupabase){authMsg('Configure config.js first.');return}
