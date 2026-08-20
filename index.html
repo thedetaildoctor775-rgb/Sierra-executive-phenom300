@@ -81,7 +81,7 @@ window.SIERRA_SUPABASE_PUBLISHABLE_KEY = window.SIERRA_SUPABASE_CANDIDATES[0].ke
  <div class="side-card"><div class="label">Operator</div><div class="side-main">Sierra Executive</div><div id="sideAircraft" class="small">N300SE • Embraer Phenom 300E</div></div>
 </aside>
 <main class="content">
-<header class="topbar"><div><div class="sub">SIERRA EXECUTIVE • CAREER OS</div><h1 id="pageTitle">Charter Market</h1></div><div style="display:flex;gap:8px;align-items:center"><span class="badge green">PHENOM 300 • FRESH V1.5</span><span id="cloudStatus" class="cloud-dot warn">LOCAL MODE</span><button class="btn secondary" id="signInTopBtn" onclick="openAuth()">SIGN IN</button><button class="btn secondary" id="setPasswordTopBtn" onclick="cloudSetNewPassword()" style="display:none">SET NEW PASSWORD</button><span id="aircraftStatus" class="status-pill">● AIRCRAFT AVAILABLE</span></div></header>
+<header class="topbar"><div><div class="sub">SIERRA EXECUTIVE • CAREER OS</div><h1 id="pageTitle">Charter Market</h1></div><div style="display:flex;gap:8px;align-items:center"><span class="badge green">PHENOM 300 • FRESH V1.6</span><span id="cloudStatus" class="cloud-dot warn">LOCAL MODE</span><button class="btn secondary" id="signInTopBtn" onclick="openAuth()">SIGN IN</button><button class="btn secondary" id="setPasswordTopBtn" onclick="cloudSetNewPassword()" style="display:none">SET NEW PASSWORD</button><span id="aircraftStatus" class="status-pill">● AIRCRAFT AVAILABLE</span></div></header>
 
 <div class="grid2">
 <section class="card">
@@ -346,10 +346,41 @@ state.marketSeeded=!!state.marketSeeded;
 state.career=state.career||{charters:0,pax:0,hours:0,profit:0,cycles:0,location:'KRNO'};
 state.career.location=(state.career.location||'KRNO').toUpperCase();
 state.log=Array.isArray(state.log)?state.log:[];
-state.marketRevision='Phenom 300 Fresh v1.2 Self-Contained';
+state.marketRevision='Phenom 300 Fresh v1.6 Realistic Baggage';
 
 function g(id){return document.getElementById(id)} function val(id){return g(id)?.value||''} function set(id,v){if(g(id))g(id).value=v??''}
 function money(n){return '$'+Math.round(Number(n||0)).toLocaleString()}
+function sxRealisticBaggage(pax,bags){
+  const p=Math.max(0,Number(pax||0));
+  const requested=Math.max(0,Number(bags||0));
+  const perPassengerCap=p>0 ? p*60 : 463;
+  return Math.round(Math.min(requested,463,perPassengerCap));
+}
+function normalizePhenomBaggage(){
+  let changed=false;
+  state.marketBoard=Array.isArray(state.marketBoard)?state.marketBoard:[];
+  state.marketBoard.forEach(x=>{
+    const fixed=sxRealisticBaggage(x.pax,x.bags);
+    if(Number(x.bags||0)!==fixed){x.bags=fixed;changed=true;}
+  });
+  if(state.activeAssignment){
+    const fixed=sxRealisticBaggage(state.activeAssignment.pax,state.activeAssignment.bags);
+    if(Number(state.activeAssignment.bags||0)!==fixed){state.activeAssignment.bags=fixed;changed=true;}
+  }
+  const currentPax=Number(val('paxCount')||state.activeAssignment?.pax||0);
+  const currentBags=Number(val('bags')||state.activeAssignment?.bags||0);
+  if(currentBags>0){
+    const fixed=sxRealisticBaggage(currentPax,currentBags);
+    if(currentBags!==fixed){
+      set('bags',fixed);
+      localStorage.setItem('p300_bags',String(fixed));
+      if(state.activeAssignment)state.activeAssignment.bags=fixed;
+      changed=true;
+    }
+  }
+  if(changed)localStorage.setItem('sierra_phenom300_state',JSON.stringify(state));
+  return changed;
+}
 
 let sxSupabase=null,sxCloudUser=null,sxCloudReady=false,sxCloudLoading=false,sxCloudSaveTimer=null;
 function cloudConfigured(){return !!(window.SIERRA_SUPABASE_URL&&window.SIERRA_SUPABASE_PUBLISHABLE_KEY&&!window.SIERRA_SUPABASE_URL.includes('YOUR_PROJECT')&&!window.SIERRA_SUPABASE_PUBLISHABLE_KEY.includes('YOUR_PUBLISHABLE'))}
@@ -508,7 +539,7 @@ function cloudPayload(){const fields={};IDS.forEach(id=>fields[id]=val(id));retu
 async function loadCloudCareer(){
  if(!sxSupabase||!sxCloudUser)return; updateCloudStatus('SYNCING…',false);sxCloudLoading=true;
  try{const {data,error}=await sxSupabase.from('career_snapshots').select('payload').eq('user_id',sxCloudUser.id).maybeSingle();if(error)throw error;
-  if(data?.payload){const p=data.payload;if(p.state)state=p.state;Object.entries(p.fields||{}).forEach(([k,v])=>set(k,v));localStorage.setItem('sierra_phenom300_state',JSON.stringify(state));IDS.forEach(id=>localStorage.setItem('p300_'+id,val(id)));sxCloudReady=true;reconcileFleet130();sync();renderMarket();updateCloudStatus('CLOUD SYNCED',true)}
+  if(data?.payload){const p=data.payload;if(p.state)state=p.state;Object.entries(p.fields||{}).forEach(([k,v])=>set(k,v));localStorage.setItem('sierra_phenom300_state',JSON.stringify(state));IDS.forEach(id=>localStorage.setItem('p300_'+id,val(id)));sxCloudReady=true;normalizePhenomBaggage();reconcileFleet130();sync();renderMarket();await saveCloudCareer();updateCloudStatus('CLOUD SYNCED',true)}
   else{sxCloudReady=true;await saveCloudCareer();updateCloudStatus('CLOUD CREATED',true)}
  }catch(e){console.error('Sierra cloud load failed:',e);updateCloudStatus('SYNC ERROR',false);authMsg('CLOUD LOAD ERROR: '+(e?.message||String(e)))}finally{sxCloudLoading=false}
 }
@@ -550,7 +581,7 @@ function repairCareerState100(){
    clearLiveAssignmentFields();
    state.workflow='scheduled';
  }
- state.marketRevision='Phenom 300 Fresh v1.2 Self-Contained';
+ state.marketRevision='Phenom 300 Fresh v1.6 Realistic Baggage';
  state.migrations.stableCore100=true;
  saveState();
 }
@@ -2192,7 +2223,7 @@ function migrate94DenverContract(){
   }
 
   state.migrations.denverFix94=true;
-  state.marketRevision='Phenom 300 Fresh v1.2 Self-Contained';
+  state.marketRevision='Phenom 300 Fresh v1.6 Realistic Baggage';
   saveState();
 }
 
@@ -2254,10 +2285,10 @@ function seedMarket(silent){
  while(lockedFlights.has('SXR'+n)) n++;
  let t=[
  {client:'Vantage Peak Capital',pax:4,bags:220,value:11800,h:6,event:'Executive meetings',cat:'Corporate',type:'Executive Charter',kind:'MARKET'},
- {client:'Arden Studios',pax:6,bags:410,value:16750,h:10,event:'Production schedule',cat:'Entertainment',type:'Corporate Transport',kind:'MARKET'},
- {client:'Crestline Advisory',pax:7,bags:610,value:49500,h:14,event:'East Coast client meetings',cat:'Corporate',type:'Long-Range Executive',kind:'MARKET'},
- {client:'Hawthorne Family Office',pax:5,bags:520,value:24200,h:18,event:'Weekend travel',cat:'VIP',type:'VIP Leisure Charter',kind:'MARKET'},
- {client:'Northstar Media Group',pax:5,bags:330,value:20400,h:22,event:'Production leadership movement',cat:'Entertainment',type:'Executive Charter',kind:'MARKET'}
+ {client:'Arden Studios',pax:6,bags:360,value:16750,h:10,event:'Production schedule',cat:'Entertainment',type:'Corporate Transport',kind:'MARKET'},
+ {client:'Crestline Advisory',pax:7,bags:420,value:49500,h:14,event:'East Coast client meetings',cat:'Corporate',type:'Long-Range Executive',kind:'MARKET'},
+ {client:'Hawthorne Family Office',pax:5,bags:300,value:24200,h:18,event:'Weekend travel',cat:'VIP',type:'VIP Leisure Charter',kind:'MARKET'},
+ {client:'Northstar Media Group',pax:5,bags:300,value:20400,h:22,event:'Production leadership movement',cat:'Entertainment',type:'Executive Charter',kind:'MARKET'}
  ];
  let generated=[], gi=0;
  for(const x of t){
@@ -2265,7 +2296,7 @@ function seedMarket(silent){
    while(lockedFlights.has('SXR'+n)) n++;
    const dest=dests[gi % dests.length]; gi++;
    generated.push({
-     flight:'SXR'+(n++),origin:base,dest:dest,client:x.client,pax:x.pax,bags:x.bags,
+     flight:'SXR'+(n++),origin:base,dest:dest,client:x.client,pax:x.pax,bags:sxRealisticBaggage(x.pax,x.bags),
      value:x.value,expiry:new Date(now+x.h*hr).toISOString(),event:x.event,
      category:x.cat,charterType:x.type,jobType:x.kind,minClass:'Super Midsize Jet',
      distance:(dist[base]&&dist[base][dest])||Math.round(250+Math.random()*1700),
@@ -2275,7 +2306,7 @@ function seedMarket(silent){
    });
  }
  state.marketBoard=[...locked,...generated];
- state.marketSeeded=true;state.marketLocation=base;state.marketRevision='Phenom 300 Fresh v1.2 Self-Contained';
+ state.marketSeeded=true;state.marketLocation=base;state.marketRevision='Phenom 300 Fresh v1.6 Realistic Baggage';
  saveState();
  ensureSameDayOffer103();
  ensureMarketTimes104();
@@ -2329,7 +2360,7 @@ function saveManualCharter(){
  const flight=g('ceFlight').value.trim().toUpperCase(),origin=g('ceOrigin').value.trim().toUpperCase(),dest=g('ceDest').value.trim().toUpperCase();
  if(!a||!flight||!origin||!dest){alert('Aircraft, flight number, origin, and destination are required.');return}
  if(origin!==String(a.location||'').toUpperCase()){alert(tail+' is at '+a.location+'. Origin must match the aircraft location.');return}
- const offer={flight,origin,dest,client:g('ceClient').value.trim()||'Private Client',pax:Number(g('cePax').value||0),bags:Number(g('ceBags').value||0),
+ const offer={flight,origin,dest,client:g('ceClient').value.trim()||'Private Client',pax:Number(g('cePax').value||0),bags:sxRealisticBaggage(Number(g('cePax').value||0),Number(g('ceBags').value||0)),
  value:Number(g('ceValue').value||0),distance:Number(g('ceDistance').value||0),departureDate:g('ceDate').value,departureTime:g('ceTime').value,
  expiry:g('ceExpiry').value?g('ceExpiry').value+':00-07:00':'',event:g('ceMission').value.trim(),category:g('ceCategory').value.trim()||'Executive',
  charterType:g('ceType').value.trim()||'Private Charter',jobType:'MARKET',minClass:g('ceClass').value.trim()||'Midsize Jet',status:'Available',manual:true,assignedAircraft:tail};
@@ -2513,7 +2544,7 @@ function ensureSameDayOffer103(){
   }).slice(0,6);
 
   state.migrations.sameDayOffer104=true;
-  state.marketRevision='Phenom 300 Fresh v1.2 Self-Contained';
+  state.marketRevision='Phenom 300 Fresh v1.6 Realistic Baggage';
   saveState();
 }
 
@@ -2542,7 +2573,7 @@ function ensureDepartureTimes102(){
     }
   });
   state.migrations.departureTimes102=true;
-  state.marketRevision='Phenom 300 Fresh v1.2 Self-Contained';
+  state.marketRevision='Phenom 300 Fresh v1.6 Realistic Baggage';
   saveState();
 }
 
@@ -2681,7 +2712,7 @@ function acceptMarket(i){
    if(p)p.status='Accepted';
  }
  const manifest=sxPassengerManifest(x);
- set('flightId',x.flight);set('origin',x.origin);set('destination',x.dest);set('depDate',x.departureDate||'');set('depTime',x.departureTime||'');set('alternate',x.dest==='KAPA'?'KDEN':x.dest==='KVNY'?'KBUR':'');set('mission',x.charterType);set('clientName',x.client);set('clientContact',sxClientContact(x));set('specialRequests',sxSpecialRequest(x));set('groundHandling','FBO coordination • baggage handling • passenger ground transportation');set('paxCount',x.pax);set('paxWeight',manifest.total);set('bags',x.bags);set('revenue',x.value);set('callsign','Sierra Executive '+x.flight.replace(/\D/g,''));set('missionBrief',sxBuildMissionBrief(x));set('manifestNotes',sxBuildManifestNotes(x,manifest));
+ set('flightId',x.flight);set('origin',x.origin);set('destination',x.dest);set('depDate',x.departureDate||'');set('depTime',x.departureTime||'');set('alternate',x.dest==='KAPA'?'KDEN':x.dest==='KVNY'?'KBUR':'');set('mission',x.charterType);set('clientName',x.client);set('clientContact',sxClientContact(x));set('specialRequests',sxSpecialRequest(x));set('groundHandling','FBO coordination • baggage handling • passenger ground transportation');set('paxCount',x.pax);set('paxWeight',manifest.total);x.bags=sxRealisticBaggage(x.pax,x.bags);set('bags',x.bags);set('revenue',x.value);set('callsign','Sierra Executive '+x.flight.replace(/\D/g,''));set('missionBrief',sxBuildMissionBrief(x));set('manifestNotes',sxBuildManifestNotes(x,manifest));
  state.workflow='accepted';state.activeAircraft=assignedTail;state.fleet[assignedTail].status='Assigned';state.billingStage='quote';
  state.activeAssignment={
    flight:x.flight,aircraft:assignedTail,origin:x.origin,dest:x.dest,
@@ -2876,7 +2907,7 @@ function repair101AccidentalPreviewAccept(){
     state.billingStage='paid';
   }
   state.migrations.previewAcceptRepair101=true;
-  state.marketRevision='Phenom 300 Fresh v1.2 Self-Contained';
+  state.marketRevision='Phenom 300 Fresh v1.6 Realistic Baggage';
   saveState();
 }
 
@@ -2885,6 +2916,7 @@ loadFields();
 repair101AccidentalPreviewAccept();
 migrate94DenverContract();
 repairCareerState100();
+normalizePhenomBaggage();
 reconcileFleet130();
 if(!state.marketBoard.length || state.marketBoard.some(x=>String(x.origin||'').toUpperCase()!==state.career.location.toUpperCase())) seedMarket(true);
 sync();renderMarket();
