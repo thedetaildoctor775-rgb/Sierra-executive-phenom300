@@ -59,22 +59,10 @@ table.basic{width:100%;border-collapse:collapse;font-size:13px}table.basic th,ta
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 window.SIERRA_SUPABASE_CANDIDATES = [
-  {
-    url: "https://zaalaniulomoxtcjadeu.supabase.co",
-    key: "sb_publishable_OM3ckHCT-h4NfmUXMLLRDQ_KwY6ax_S"
-  },
-  {
-    url: "https://zaalaniulomoxtcjadeu.supabase.co",
-    key: "sb_publishable_0M3ckHCT-h4NfmUXMLLRDQ_KwY6ax_S"
-  },
-  {
-    url: "https://zaa1aniulomoxtcjadeu.supabase.co",
-    key: "sb_publishable_OM3ckHCT-h4NfmUXMLLRDQ_KwY6ax_S"
-  },
-  {
-    url: "https://zaa1aniulomoxtcjadeu.supabase.co",
-    key: "sb_publishable_0M3ckHCT-h4NfmUXMLLRDQ_KwY6ax_S"
-  }
+  {url:"https://zaalaniulomoxtcjadeu.supabase.co", key:"sb_publishable_OM3ckHCT-h4NfmUXMLLRDQ_KwY6ax_S"},
+  {url:"https://zaalaniulomoxtcjadeu.supabase.co", key:"sb_publishable_0M3ckHCT-h4NfmUXMLLRDQ_KwY6ax_S"},
+  {url:"https://zaalaniulomoxtcjadeu.supabase.co", key:"sb_publishable_OM3ckHCT-h4NfmUXMLLRDQ_KWY6ax_S"},
+  {url:"https://zaalaniulomoxtcjadeu.supabase.co", key:"sb_publishable_0M3ckHCT-h4NfmUXMLLRDQ_KWY6ax_S"}
 ];
 window.SIERRA_SUPABASE_URL = window.SIERRA_SUPABASE_CANDIDATES[0].url;
 window.SIERRA_SUPABASE_PUBLISHABLE_KEY = window.SIERRA_SUPABASE_CANDIDATES[0].key;
@@ -93,7 +81,7 @@ window.SIERRA_SUPABASE_PUBLISHABLE_KEY = window.SIERRA_SUPABASE_CANDIDATES[0].ke
  <div class="side-card"><div class="label">Operator</div><div class="side-main">Sierra Executive</div><div id="sideAircraft" class="small">N300SE • Embraer Phenom 300E</div></div>
 </aside>
 <main class="content">
-<header class="topbar"><div><div class="sub">SIERRA EXECUTIVE • CAREER OS</div><h1 id="pageTitle">Charter Market</h1></div><div style="display:flex;gap:8px;align-items:center"><span class="badge green">PHENOM 300 • FRESH V1.4</span><span id="cloudStatus" class="cloud-dot warn">LOCAL MODE</span><button class="btn secondary" id="signInTopBtn" onclick="openAuth()">SIGN IN</button><button class="btn secondary" id="setPasswordTopBtn" onclick="cloudSetNewPassword()" style="display:none">SET NEW PASSWORD</button><span id="aircraftStatus" class="status-pill">● AIRCRAFT AVAILABLE</span></div></header>
+<header class="topbar"><div><div class="sub">SIERRA EXECUTIVE • CAREER OS</div><h1 id="pageTitle">Charter Market</h1></div><div style="display:flex;gap:8px;align-items:center"><span class="badge green">PHENOM 300 • FRESH V1.5</span><span id="cloudStatus" class="cloud-dot warn">LOCAL MODE</span><button class="btn secondary" id="signInTopBtn" onclick="openAuth()">SIGN IN</button><button class="btn secondary" id="setPasswordTopBtn" onclick="cloudSetNewPassword()" style="display:none">SET NEW PASSWORD</button><span id="aircraftStatus" class="status-pill">● AIRCRAFT AVAILABLE</span></div></header>
 
 <div class="grid2">
 <section class="card">
@@ -370,30 +358,45 @@ function openAuth(){g('authModal')?.classList.add('open')} function closeAuth(){
 
 async function detectSupabaseConfig(){
  const candidates = Array.isArray(window.SIERRA_SUPABASE_CANDIDATES) ? window.SIERRA_SUPABASE_CANDIDATES : [];
- let lastError = "";
+ const results=[];
  for(const c of candidates){
-  try{
-   const ctrl = new AbortController();
-   const timer = setTimeout(()=>ctrl.abort(), 5000);
-   const res = await fetch(c.url + "/auth/v1/settings", {
-    method:"GET",
-    headers:{apikey:c.key, Authorization:"Bearer "+c.key},
-    signal:ctrl.signal
-   });
-   clearTimeout(timer);
-   if(res.ok){
-    window.SIERRA_SUPABASE_URL = c.url;
-    window.SIERRA_SUPABASE_PUBLISHABLE_KEY = c.key;
-    return c;
+  for(const path of ["/auth/v1/settings","/rest/v1/"]){
+   try{
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),6000);
+    const res=await fetch(c.url+path,{
+      method:"GET",
+      headers:{apikey:c.key,Authorization:"Bearer "+c.key,Accept:"application/json"},
+      signal:ctrl.signal
+    });
+    clearTimeout(timer);
+    let body="";
+    try{body=await res.text()}catch(_){}
+    results.push({url:c.url,key:c.key,path,status:res.status,body:body.slice(0,180)});
+    if(res.ok){
+      window.SIERRA_SUPABASE_URL=c.url;
+      window.SIERRA_SUPABASE_PUBLISHABLE_KEY=c.key;
+      return c;
+    }
+    if(res.status!==401 && res.status!==403){
+      // Host is reachable; this key may still be usable for auth library even if probe endpoint differs.
+      if(path==="/auth/v1/settings" && res.status<500){
+        window.SIERRA_SUPABASE_URL=c.url;
+        window.SIERRA_SUPABASE_PUBLISHABLE_KEY=c.key;
+      }
+    }
+   }catch(e){
+    results.push({url:c.url,key:c.key,path,error:e?.message||String(e)});
    }
-   let body="";
-   try{ body = await res.text(); }catch(_){}
-   lastError = "HTTP "+res.status+(body ? " "+body.slice(0,180) : "");
-  }catch(e){
-   lastError = e?.message || String(e);
   }
  }
- throw new Error("Could not verify Supabase connection. Last result: "+lastError);
+ const reachable=results.filter(r=>r.status);
+ const rejected=reachable.filter(r=>r.status===401||r.status===403);
+ if(rejected.length){
+   throw new Error("Supabase host is reachable, but the publishable key is being rejected.");
+ }
+ const first=results[0];
+ throw new Error("Supabase host could not be reached from this browser.");
 }
 
 async function buildDetectedSupabaseClient(){
@@ -435,7 +438,7 @@ async function initCloud(){
   });
  }catch(e){
   console.error('Supabase init failed:',e);
-  updateCloudStatus('CLOUD ERROR',false);
+  updateCloudStatus('LOCAL READY',false);
   authMsg('Cloud init error: '+(e?.message||String(e)));
  }
 }
