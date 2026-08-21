@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/legacy.js": {
+      "includeFiles": "legacy.html"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/legacy.html",
+      "destination": "/api/legacy"
+    }
+  ]
+}
