@@ -8,13 +8,46 @@ export default async function handler(req,res){
   if(!pilot) return res.status(400).json({error:'No transmission'});
 
   const loadedCallsign=String(state.callsign||state.flight||state.tail||'').trim();
+  const cs=loadedCallsign||'Aircraft';
   const p=pilot.toLowerCase();
+  const currentController=String(state.controller||'').toLowerCase();
+  const runway=String(state.runway||'').trim();
+  const readyForDeparture=/ready for departure|ready for takeoff/.test(p);
+  const holdingShort=/holding short|hold short/.test(p);
+  const airborne=/airborne|passing\s+\d|climbing out|positive rate/.test(p);
+
+  // Deterministic departure sequencing prevents Ground/Tower loops.
+  if(readyForDeparture && currentController.includes('ground')){
+    return res.status(200).json({
+      ok:true,
+      reply:`${cs}, contact Tower 120.5.`,
+      controller:'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
+      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Tower'
+    });
+  }
+  if(readyForDeparture && currentController.includes('tower')){
+    return res.status(200).json({
+      ok:true,
+      reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,
+      controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
+      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Takeoff'
+    });
+  }
+  if(holdingShort && currentController.includes('tower') && !readyForDeparture){
+    return res.status(200).json({
+      ok:true,
+      reply:`${cs}, roger.`,
+      controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
+      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:state.phase||'Tower'
+    });
+  }
+
   const inferredStage = /runway vacated|clear of runway|taxi to parking/.test(p) ? 'ground' :
     /established|final|landing/.test(p) ? 'tower' :
     /ready for descent|descending|approach/.test(p) ? 'approach' :
-    /airborne|passing\s+\d|climbing|departure/.test(p) ? 'departure' :
-    /ready for departure|ready for takeoff|holding short/.test(p) ? 'tower' :
-    /contact ground|ground\s+1?2\d(?:\.| decimal )?\d|pushback|ready to taxi|taxi/.test(p) ? 'ground' : '';
+    readyForDeparture||holdingShort ? 'tower' :
+    airborne||/\bdeparture\b|climb and maintain|radar contact/.test(p) ? 'departure' :
+    /contact ground|ground\s+1?2\d(?:\.| decimal )?\d|pushback|ready to taxi|request taxi|\btaxi\b/.test(p) ? 'ground' : '';
 
   const system=`You are SIERRA ATC, a realistic U.S. FAA-style air traffic controller for a FLIGHT SIMULATOR ONLY. Never sound like a chatbot or customer-service assistant. Use concise, natural radio phraseology, clipped cadence, and realistic controller behavior. Do not say phrases such as "how can I help", "let me know", "understood", or explain what you are doing. Issue only one realistic controller transmission at a time.
 
@@ -28,9 +61,12 @@ CONTROLLER / HANDOFF STATE:
 - Stay with the current facility until an operationally appropriate handoff.
 - Ground handles clearance follow-up, pushback, and taxi.
 - Tower handles runway crossing, line-up, takeoff clearance, landing clearance, and immediate runway operations.
-- Departure begins only after takeoff / airborne or after Tower explicitly hands the aircraft off.
+- Departure begins only AFTER takeoff / airborne or after Tower explicitly hands the aircraft off.
 - Approach begins during descent/arrival sequencing.
 - Ground resumes only after the aircraft has vacated the runway.
+- A transmission containing "ready for departure" or "ready for takeoff" is a TOWER-stage event, never Departure control.
+- If the aircraft is already on Tower and reports ready for departure, issue a takeoff clearance when operationally appropriate instead of repeating hold-short indefinitely.
+- If the pilot merely reads back "holding short", acknowledge briefly; do not repeat the same hold-short instruction unless there is a reason.
 - Do NOT tell a parked or taxiing aircraft to contact Departure.
 - Do NOT send an airborne aircraft back to Ground unless it has landed and vacated.
 - SIM STATE.inferredStage is a strong hint and should control the facility when non-empty.
@@ -38,7 +74,7 @@ CONTROLLER / HANDOFF STATE:
 
 GROUND CHECK-IN REALISM:
 - A pilot merely acknowledging a handoff to Ground, e.g. "contact Ground 121.8" or checking in on Ground, is NOT a taxi request.
-- On that first Ground check-in, respond briefly with the loaded callsign and facility, for example "${loadedCallsign||'Aircraft'}, San Francisco Ground, go ahead." Do not say "advise ready to taxi" and do not issue taxi instructions yet.
+- On that first Ground check-in, respond briefly with the loaded callsign and facility. Do not say "advise ready to taxi" and do not issue taxi instructions yet.
 - Wait until the pilot explicitly says "ready to taxi", "request taxi", "ready for pushback", or otherwise asks for a ground movement clearance before issuing taxi/pushback instructions.
 - Once a taxi request is made, issue a realistic single taxi clearance and preserve the assigned runway.
 
@@ -81,36 +117,18 @@ Use plausible simulated runway/taxi/altitude/heading/speed/frequency/squawk assi
     const j=await r.json();
     if(!r.ok) return res.status(r.status).json({error:j?.error?.message||'ATC model error'});
     let text=j.output_text||'';
-    if(!text && Array.isArray(j.output)){
-      for(const item of j.output||[]) for(const c of item.content||[]) if(c.type==='output_text') text+=c.text||'';
-    }
-    let out;
-    try{out=JSON.parse(text)}catch{out={reply:text}};
+    if(!text && Array.isArray(j.output)) for(const item of j.output||[]) for(const c of item.content||[]) if(c.type==='output_text') text+=c.text||'';
+    let out;try{out=JSON.parse(text)}catch{out={reply:text}};
 
-    // Never let a sparse model response erase persistent controller state.
-    const previous={
-      controller:String(state.controller||''),frequency:String(state.frequency||''),runway:String(state.runway||''),
-      squawk:String(state.squawk||''),heading:String(state.heading||''),altitude:String(state.altitude||''),
-      speed:String(state.speed||''),clearance:String(state.clearance||''),phase:String(state.phase||'')
-    };
-    for(const k of Object.keys(previous)){
-      if((out[k]===undefined||out[k]===null||String(out[k]).trim()==='') && previous[k]) out[k]=previous[k];
-    }
+    const previous={controller:String(state.controller||''),frequency:String(state.frequency||''),runway:String(state.runway||''),squawk:String(state.squawk||''),heading:String(state.heading||''),altitude:String(state.altitude||''),speed:String(state.speed||''),clearance:String(state.clearance||''),phase:String(state.phase||'')};
+    for(const k of Object.keys(previous)) if((out[k]===undefined||out[k]===null||String(out[k]).trim()==='')&&previous[k]) out[k]=previous[k];
 
-    // Deterministic facility guardrails for the common flight stages.
     const facilityNames={ground:'Ground',tower:'Tower',departure:'Departure',approach:'Approach'};
-    const facilityFreqs={ground:'121.8',tower:'118.7',departure:'135.1',approach:'124.9'};
+    const facilityFreqs={ground:'121.8',tower:'120.5',departure:'135.1',approach:'124.9'};
     if(inferredStage){
-      const prevCtl=previous.controller.toLowerCase();
-      const target=facilityNames[inferredStage];
-      const alreadySame=prevCtl.includes(inferredStage);
-      if(!alreadySame){
-        out.controller=target;
-        if(!out.frequency || out.frequency===previous.frequency) out.frequency=facilityFreqs[inferredStage];
-      }else{
-        out.controller=previous.controller||target;
-        out.frequency=previous.frequency||out.frequency||facilityFreqs[inferredStage];
-      }
+      const prevCtl=previous.controller.toLowerCase(),target=facilityNames[inferredStage],alreadySame=prevCtl.includes(inferredStage);
+      if(!alreadySame){out.controller=target;if(!out.frequency||out.frequency===previous.frequency)out.frequency=facilityFreqs[inferredStage]}
+      else{out.controller=previous.controller||target;out.frequency=previous.frequency||out.frequency||facilityFreqs[inferredStage]}
     }
 
     return res.status(200).json({ok:true,...out});
