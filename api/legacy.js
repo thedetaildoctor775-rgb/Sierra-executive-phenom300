@@ -6,7 +6,7 @@ export default function handler(req,res){
     const file=path.join(process.cwd(),'legacy.html');
     let html=fs.readFileSync(file,'utf8');
     if(!html.includes('market-boost.js')){
-      html=html.replace(/<\/body>/i,'<script src="/market-boost.js"></script></body>');
+      html=html.replace(/<\/body>/i,'<script src="/market-boost.js"></script><script src="/market-cap-fix.js"></script></body>');
     }
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store');
