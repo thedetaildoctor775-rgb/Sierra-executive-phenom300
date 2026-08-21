@@ -10,6 +10,24 @@ function reportedAltitude(text){
   m=s.match(/\b(?:passing|level|at|leaving|through)\s+(\d{4,5})\b/); if(m)return Number(m[1]);
   return 0;
 }
+function altitudeReadbackMatches(text,assigned){
+  const a=Number(assigned)||0;
+  if(!a)return false;
+  const s=String(text||'').toLowerCase().replace(/[,.-]/g,' ').replace(/\s+/g,' ').trim();
+  if(!/\b(?:climb|climbing|maintain|climate)\b/.test(s))return false;
+  if(new RegExp(`\\b${a}\\b`).test(s)||new RegExp(`\\b${String(a).replace(/000$/,'')}\\s*000\\b`).test(s))return true;
+  if(a%1000!==0)return false;
+  const thousands=a/1000;
+  if(new RegExp(`\\b${thousands}\\s+thousand\\b`).test(s))return true;
+  const words=['zero','one','two','three','four','five','six','seven','eight','nine'];
+  const spoken=String(thousands).split('').map(d=>words[Number(d)]).join(' ');
+  if(new RegExp(`\\b${spoken}\\s+thousand\\b`).test(s))return true;
+  if(thousands>=10&&thousands<=19){
+    const first=words[1],rest=Number(String(thousands)[1])*1000;
+    if(new RegExp(`\\b${first}\\s+${rest}\\b`).test(s))return true;
+  }
+  return false;
+}
 async function simbriefProfile(){
   const userid=process.env.SIMBRIEF_USERID||'1237035';
   try{
@@ -101,6 +119,17 @@ export default async function handler(req,res){
     return res.status(200).json({ok:true,reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,controller:state.controller||'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
   }
 
+  const assignedNow=altNumber(state.altitude);
+  const isClimbReadback=/\b(?:climb|climbing|maintain|climate)\b/.test(p)&&!/\b(?:passing|leaving|through|level| at )\b/.test(` ${p} `);
+  if((currentController.includes('departure')||currentController.includes('center'))&&assignedNow&&isClimbReadback&&altitudeReadbackMatches(pilot,assignedNow)){
+    return res.status(200).json({
+      ok:true,
+      reply:`${cs}, readback correct.`,
+      controller:state.controller||'Departure',frequency:state.frequency||'125.35',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
+      altitude:String(assignedNow),speed:state.speed||'',clearance:`Climb and maintain ${assignedNow.toLocaleString('en-US')}`,phase:state.phase||'Climb'
+    });
+  }
+
   const inferredStage=
     /runway vacated|clear of runway|taxi to parking/.test(p)?'ground':
     groundMovement||groundCheckin?'ground':
@@ -139,7 +168,8 @@ ROUTE / SID PROFILE:
 
 CLIMB PROGRESSION:
 - Do not repeatedly assign the same altitude after the pilot reports meaningful progress.
-- On Departure, when the pilot is within about 1,500 ft of the assigned altitude, issue the next reasonable climb unless a known SimBrief constraint requires otherwise.
+- A readback of an assigned climb altitude is NOT progress to that altitude. Acknowledge the readback and wait for an actual altitude/progress report before issuing the next climb.
+- On Departure, when the pilot reports being within about 1,500 ft of the assigned altitude, issue the next reasonable climb unless a known SimBrief constraint requires otherwise.
 - Progress toward SIM STATE.cruise in stages.
 - Once established in the higher climb, hand the aircraft to Center rather than keeping it on Departure to cruise.
 
@@ -149,6 +179,7 @@ GROUND PHRASEOLOGY:
 
 READBACKS:
 - Accept phonetic/speech-recognition errors when meaning is clear. Correct only material runway/altitude/heading/squawk/frequency/route errors.
+- Speech recognition may render "one three thousand" as "one 3000" or similar; treat that as 13,000 when it matches the current assigned altitude.
 
 Output strict JSON with keys: reply, controller, frequency, runway, squawk, heading, altitude, speed, clearance, phase. This is simulation, not live ATC.`;
 
@@ -188,6 +219,12 @@ Output strict JSON with keys: reply, controller, frequency, runway, squawk, head
           out.altitude=String(next);out.clearance=`Climb and maintain ${next.toLocaleString('en-US')}`;out.reply=`${cs}, climb and maintain ${next.toLocaleString('en-US')}.`;out.controller=previous.controller||'Departure';out.frequency=previous.frequency||'125.35';out.phase='Climb';
         }
       }
+    }
+
+    const syncedAlt=altNumber(out.altitude);
+    if(syncedAlt&&/\bclimb\b.*\bmaintain\b/i.test(String(out.reply||''))){
+      out.clearance=`Climb and maintain ${syncedAlt.toLocaleString('en-US')}`;
+      out.phase='Climb';
     }
 
     if(previous.runway&&out.runway&&!sameRunway(previous.runway,out.runway)&&!String(out.reply||'').toLowerCase().includes('runway change'))out.runway=previous.runway;
