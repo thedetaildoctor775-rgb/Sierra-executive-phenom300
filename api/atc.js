@@ -78,13 +78,15 @@ export default async function handler(req,res){
   const groundMovement=readyToTaxi||pushback||/taxi to parking|runway vacated|clear of runway/.test(p);
   const clearanceContext=ifrClearanceRequest || (currentController.includes('clearance') && !groundCheckin && !groundMovement && !readyForDeparture && !holdingShort && !airborne && !explicitDepartureCheckin);
 
-  // Hard facility-state guards. These prevent the model from falling back into the wrong phase.
   if(pushback){
     return res.status(200).json({ok:true,reply:`${cs}, pushback approved, start at your discretion.`,controller:'Ground',frequency:'121.8',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:'Pushback approved; start at your discretion',phase:'Ground'});
   }
   if(readyToTaxi){
     const rwy=runway||'28L';
     return res.status(200).json({ok:true,reply:`${cs}, runway ${rwy}, taxi via Alpha, hold short of runway ${rwy}.`,controller:'Ground',frequency:'121.8',runway:rwy,squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Runway ${rwy}, taxi via Alpha, hold short of runway ${rwy}`,phase:'Ground'});
+  }
+  if(holdingShort && currentController.includes('ground') && !readyForDeparture){
+    return res.status(200).json({ok:true,reply:`${cs}, readback correct.`,controller:'Ground',frequency:'121.8',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Ground'});
   }
   if(takeoffReadback && currentController.includes('tower')){
     return res.status(200).json({ok:true,reply:`${cs}, readback correct.`,controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
@@ -102,7 +104,7 @@ export default async function handler(req,res){
   const inferredStage=
     /runway vacated|clear of runway|taxi to parking/.test(p)?'ground':
     groundMovement||groundCheckin?'ground':
-    towerCheckin||readyForDeparture||holdingShort||takeoffReadback?'tower':
+    towerCheckin||readyForDeparture||takeoffReadback||(holdingShort&&currentController.includes('tower'))?'tower':
     approachCheckin||/ready for descent|descending|established|final|landing/.test(p)?'approach':
     centerCheckin?'center':
     explicitDepartureCheckin||airborne?'departure':
@@ -119,8 +121,9 @@ CALLSIGN LOCK:
 
 FACILITY STATE MACHINE:
 - Clearance Delivery handles only IFR clearance and clearance readbacks.
-- Ground handles Ground check-in, pushback, start, taxi, and post-landing ground movement.
-- Tower handles hold-short, runway, takeoff and landing operations.
+- Ground handles Ground check-in, pushback, start, taxi, taxi readbacks, and post-landing ground movement.
+- A Ground taxi readback containing "hold short" stays with Ground; it does not switch the active controller to Tower.
+- Tower handles hold-short reports only after the aircraft has actually been handed to Tower, plus runway, takeoff and landing operations.
 - Departure handles the initial climb after takeoff.
 - Center handles enroute climb/cruise.
 - Approach handles arrival/descent before Tower.
