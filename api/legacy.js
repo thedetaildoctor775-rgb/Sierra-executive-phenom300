@@ -9,6 +9,7 @@ export default function handler(req,res){
     if(!html.includes('market-boost.js')) scripts.push('<script src="/market-boost.js"></script><script src="/market-cap-fix.js"></script>');
     if(!html.includes('dispatch-phone.js')) scripts.push('<script src="/dispatch-phone.js"></script>');
     if(!html.includes('dispatch-standby-fix.js')) scripts.push('<script src="/dispatch-standby-fix.js"></script>');
+    if(!html.includes('fleet-ui.js')) scripts.push('<script src="/fleet-ui.js"></script>');
 
     const detailDoctorTheme=`<style id="detail-doctor-theme">
 :root{
