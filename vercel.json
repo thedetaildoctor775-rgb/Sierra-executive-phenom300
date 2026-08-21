@@ -4,6 +4,12 @@
       "includeFiles": "legacy.html"
     }
   },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index-v2.html"
+    }
+  ],
   "redirects": [
     {
       "source": "/legacy.html",
