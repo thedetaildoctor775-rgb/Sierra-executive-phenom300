@@ -8,6 +8,10 @@
     {
       "source": "/",
       "destination": "/index-v2.html"
+    },
+    {
+      "source": "/index.html",
+      "destination": "/index-v2.html"
     }
   ],
   "redirects": [
