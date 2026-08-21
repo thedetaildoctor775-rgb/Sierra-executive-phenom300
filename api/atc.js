@@ -1,3 +1,45 @@
+function altNumber(v){
+  const s=String(v||'').toUpperCase().replace(/,/g,'').trim();
+  if(!s)return 0;
+  const fl=s.match(/FL\s*(\d{2,3})/); if(fl)return Number(fl[1])*100;
+  const n=s.match(/\d{3,5}/); return n?Number(n[0]):0;
+}
+function reportedAltitude(text){
+  const s=String(text||'').toLowerCase().replace(/,/g,'');
+  let m=s.match(/\b(\d{4,5})\s+(?:climbing|for)\s+\d{4,5}\b/); if(m)return Number(m[1]);
+  m=s.match(/\b(?:passing|level|at|leaving|through)\s+(\d{4,5})\b/); if(m)return Number(m[1]);
+  return 0;
+}
+async function simbriefProfile(){
+  const userid=process.env.SIMBRIEF_USERID||'1237035';
+  try{
+    const r=await fetch(`https://www.simbrief.com/api/xml.fetcher.php?userid=${encodeURIComponent(userid)}&json=v2`,{headers:{Accept:'application/json','User-Agent':'Sierra-Executive-Phenom300/1.0'}});
+    if(!r.ok)return null;
+    const x=await r.json();
+    const fixes=Array.isArray(x?.navlog?.fix)?x.navlog.fix:[];
+    return {
+      route:String(x?.general?.route||x?.general?.route_ifps||''),
+      cruise:String(x?.general?.initial_altitude||x?.general?.cruise_altitude||''),
+      fixes:fixes.slice(0,30).map(f=>({
+        ident:String(f?.ident||f?.name||''),
+        airway:String(f?.via_airway||f?.airway||''),
+        altitude:Number(f?.altitude_feet||f?.altitude||f?.plan_altitude||0)||0,
+        minAltitude:Number(f?.altitude_min||f?.min_altitude||0)||0,
+        maxAltitude:Number(f?.altitude_max||f?.max_altitude||0)||0,
+        constraint:String(f?.altitude_constraint||f?.restriction||'')
+      })).filter(f=>f.ident)
+    };
+  }catch{return null}
+}
+function nextClimb(profile,assigned,cruise){
+  const cr=altNumber(cruise)||45000;
+  const a=assigned||5000;
+  const planned=(profile?.fixes||[]).map(f=>Number(f.altitude)||0).filter(x=>x>a+1000&&x<=cr).sort((x,y)=>x-y)[0]||0;
+  let fallback=a<10000?10000:a<18000?18000:Math.min(a+10000,cr);
+  if(planned)fallback=Math.min(fallback,planned);
+  return Math.max(a,Math.min(fallback,cr));
+}
+
 export default async function handler(req,res){
   if(req.method!=='POST') return res.status(405).json({error:'POST only'});
   const key=process.env.OPENAI_API_KEY;
@@ -20,136 +62,67 @@ export default async function handler(req,res){
   const explicitDepartureCheckin=/\b(?:san francisco\s+)?departure\b/.test(p)&&!/departure frequency|after departure|departure runway|departure procedure|departure clearance/.test(p);
   const clearanceContext=ifrClearanceRequest || (currentController.includes('clearance') && !groundCheckin && !readyForDeparture && !holdingShort && !airborne && !explicitDepartureCheckin);
 
-  // Deterministic departure sequencing prevents Ground/Tower loops.
-  if(readyForDeparture && currentController.includes('ground')){
-    return res.status(200).json({
-      ok:true,
-      reply:`${cs}, contact Tower 120.5.`,
-      controller:'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
-      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Tower'
-    });
-  }
-  if(readyForDeparture && currentController.includes('tower')){
-    return res.status(200).json({
-      ok:true,
-      reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,
-      controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
-      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Takeoff'
-    });
-  }
-  if(holdingShort && currentController.includes('tower') && !readyForDeparture){
-    return res.status(200).json({
-      ok:true,
-      reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,
-      controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
-      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Takeoff'
-    });
-  }
+  if(readyForDeparture && currentController.includes('ground')) return res.status(200).json({ok:true,reply:`${cs}, contact Tower 120.5.`,controller:'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Tower'});
+  if(readyForDeparture && currentController.includes('tower')) return res.status(200).json({ok:true,reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Takeoff'});
+  if(holdingShort && currentController.includes('tower') && !readyForDeparture) return res.status(200).json({ok:true,reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Takeoff'});
 
-  const inferredStage = /runway vacated|clear of runway|taxi to parking/.test(p) ? 'ground' :
-    /established|final|landing/.test(p) ? 'tower' :
-    /ready for descent|descending|approach/.test(p) ? 'approach' :
-    readyForDeparture||holdingShort ? 'tower' :
-    clearanceContext ? 'clearance' :
-    airborne||explicitDepartureCheckin ? 'departure' :
-    /contact ground|ground\s+1?2\d(?:\.| decimal )?\d|pushback|ready to taxi|request taxi|\btaxi\b/.test(p) ? 'ground' : '';
+  const inferredStage=/runway vacated|clear of runway|taxi to parking/.test(p)?'ground':/established|final|landing/.test(p)?'tower':/ready for descent|descending|approach/.test(p)?'approach':readyForDeparture||holdingShort?'tower':clearanceContext?'clearance':airborne||explicitDepartureCheckin?'departure':/contact ground|ground\s+1?2\d(?:\.| decimal )?\d|pushback|ready to taxi|request taxi|\btaxi\b/.test(p)?'ground':'';
 
-  const system=`You are SIERRA ATC, a realistic U.S. FAA-style air traffic controller for a FLIGHT SIMULATOR ONLY. Never sound like a chatbot or customer-service assistant. Use concise, natural radio phraseology, clipped cadence, and realistic controller behavior. Do not say phrases such as "how can I help", "let me know", "understood", or explain what you are doing. Issue only one realistic controller transmission at a time.
+  const repAlt=reportedAltitude(pilot);
+  const sb=(currentController.includes('departure')||currentController.includes('center')||inferredStage==='departure')?await simbriefProfile():null;
+
+  const system=`You are SIERRA ATC, a realistic U.S. FAA-style air traffic controller for a FLIGHT SIMULATOR ONLY. Use concise, natural FAA-style radio phraseology and one controller transmission at a time.
 
 CALLSIGN LOCK:
-- The loaded callsign is authoritative and immutable: ${loadedCallsign||'(none loaded)'}.
-- NEVER replace it with a callsign heard in the pilot transcript when they differ. Speech recognition can mis-hear the callsign.
-- NEVER ask the pilot to verify callsign solely because the transcript contains a different number/name.
-- Address the aircraft using the loaded callsign whenever one is available.
+- Loaded callsign is authoritative: ${loadedCallsign||'(none loaded)'}.
+- Never replace it with a misheard transcript callsign.
 
-CONTROLLER / HANDOFF STATE:
-- Stay with the current facility until an operationally appropriate handoff.
-- Clearance Delivery remains the active controller through the entire IFR clearance and all clearance readbacks, even when phrases such as "departure frequency", "after departure", or a departure procedure are spoken.
-- The word "departure" inside an IFR clearance does NOT mean the aircraft is talking to Departure Control.
-- Ground handles clearance follow-up, pushback, and taxi after the pilot checks in with Ground.
-- Tower handles runway crossing, line-up, takeoff clearance, landing clearance, and immediate runway operations.
-- Departure begins only AFTER takeoff / airborne or when the pilot explicitly checks in with a Departure controller.
-- Approach begins during descent/arrival sequencing.
-- Ground resumes only after the aircraft has vacated the runway.
-- A transmission containing "ready for departure" or "ready for takeoff" is a TOWER-stage event, never Departure control.
-- Once the aircraft is on Tower and reports holding short of the assigned runway, clear it for takeoff in this simulator flow unless a specific simulated conflict has been established.
-- Do NOT reply only "roger" to a holding-short report when the aircraft is waiting for departure and no conflicting traffic state exists.
-- Do NOT tell a parked or taxiing aircraft to contact Departure.
-- Do NOT send an airborne aircraft back to Ground unless it has landed and vacated.
-- SIM STATE.inferredStage is a strong hint and should control the facility when non-empty.
-- Always preserve the currently active controller unless there is an actual handoff/check-in event.
+CONTROLLER STATE:
+- Clearance stays active through the IFR clearance/readback.
+- Ground handles pushback/taxi; Tower handles runway/takeoff; Departure begins after takeoff/check-in; Approach on arrival; Ground only after runway vacated.
+- Preserve the active controller until a real handoff/check-in.
 
-GROUND CHECK-IN REALISM:
-- A pilot merely acknowledging a handoff to Ground, e.g. "contact Ground 121.8" or checking in on Ground, is NOT a taxi request.
-- On that first Ground check-in, respond briefly with the loaded callsign and facility. Do not say "advise ready to taxi" and do not issue taxi instructions yet.
-- Wait until the pilot explicitly says "ready to taxi", "request taxi", "ready for pushback", or otherwise asks for a ground movement clearance before issuing taxi/pushback instructions.
-- Once a taxi request is made, issue a realistic single taxi clearance and preserve the assigned runway.
+ROUTE / SID PROFILE:
+- SIM STATE.route is authoritative. Never invent or rename route elements.
+- SIM STATE.simbriefProfile is supplemental planning guidance from the latest SimBrief OFP. Use its fix sequence and any available altitude/min/max/constraint fields to avoid nonsensical climb instructions.
+- Do NOT claim a charted restriction exists unless SIM STATE.simbriefProfile explicitly provides one.
+- If no explicit restriction is available, use the SimBrief planned altitude profile plus normal simulated ATC progression.
 
-GROUND TAXI PHRASEOLOGY:
-- Use FAA-style order for taxi clearances: runway first, then "taxi via" the taxiway route, then any hold-short restriction.
-- Say "Runway 28L, taxi via Alpha, hold short of runway 28L" rather than "taxi runway 28L via Alpha, hold short 28L."
-- Always say "hold short of runway [runway]"; do not omit the words "of runway."
-- Do not invent extra taxiways just to make the clearance longer. Keep the taxi route concise and plausible.
-- A correct taxi readback should receive only a brief acknowledgement unless another instruction is operationally required.
+CLIMB PROGRESSION:
+- Do not get stuck repeatedly assigning the same altitude when the pilot reports meaningful climb progress.
+- When on Departure and the pilot reports within roughly 1,500 ft of the assigned altitude, issue the next reasonable climb clearance unless a known SimBrief restriction requires holding lower.
+- Progress toward SIM STATE.cruise in realistic stages; do not jump immediately from 5,000 to cruise unless operationally appropriate.
+- Departure should eventually hand the aircraft to Center rather than work the entire climb to cruise itself.
 
-ROUTE LOCK RULES:
-- Treat SIM STATE.route as authoritative whenever it is non-empty.
-- NEVER invent, substitute, append, remove, or rename waypoints, SIDs, STARs, airways, or approaches that are not already present in SIM STATE.route.
-- If the route is loaded, clear the aircraft "as filed" or explicitly repeat only route elements that already exist in SIM STATE.route.
-- Do not create a departure or arrival procedure just because one would be plausible.
-- If SIM STATE.route is empty, keep route language generic: "as filed" or destination only. Do not fabricate a full route.
-- Destination and origin must remain exactly the loaded airports in SIM STATE.
+GROUND PHRASEOLOGY:
+- Taxi order: runway first, then "taxi via", then "hold short of runway ...".
 
-CLEARANCE CONSISTENCY:
-- Preserve previously assigned runway, squawk, altitude, heading, speed, frequency, and clearance unless there is an operational reason to change them.
-- Do not randomly change runway or squawk between transmissions.
-- Cruise altitude comes from SIM STATE.cruise when supplied. Do not invent a different cruise level.
-- For initial IFR clearance, use a plausible initial altitude, but keep expected cruise exactly equal to SIM STATE.cruise when present.
-- A frequency change is a handoff, not casual chatter. Only change frequency when changing controller/facility.
+READBACKS:
+- Accept phonetic/speech-recognition errors when meaning is clear. Correct only material runway/altitude/heading/squawk/frequency/route errors.
 
-READBACK HANDLING:
-- Speech recognition may mis-hear aviation words, callsigns, runway numbers, procedure names, and digits. Judge readbacks by meaning and phonetic similarity, not literal transcription.
-- If a pilot readback clearly corresponds to the issued clearance despite transcription errors, accept it with a brief "readback correct" or equivalent.
-- Correct only safety-critical or materially wrong items: runway, hold-short instruction, altitude, heading, squawk, frequency, or route element.
-- Do not recite the entire clearance again just because one word was garbled.
-- Do not introduce new route content while correcting a readback.
+Output strict JSON with keys: reply, controller, frequency, runway, squawk, heading, altitude, speed, clearance, phase. This is simulation, not live ATC.`;
 
-Use plausible simulated runway/taxi/altitude/heading/speed/frequency/squawk assignments based on the supplied simulated flight context. If an exact real-world frequency/runway cannot be known from context, choose a plausible simulated value rather than claiming it is live data. Output strict JSON with keys: reply, controller, frequency, runway, squawk, heading, altitude, speed, clearance, phase. Values may be empty strings. This is simulation, not real-world ATC.`;
-
-  const context={
-    flight:state.flight||'',callsign:loadedCallsign,tail:state.tail||'',aircraft:state.aircraft||'',
-    origin:state.origin||'',destination:state.destination||'',alternate:state.alternate||'',route:state.route||'',cruise:state.cruise||'',
-    phase:state.phase||'',controller:state.controller||'',frequency:state.frequency||'',runway:state.runway||'',squawk:state.squawk||'',
-    heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',inferredStage
-  };
+  const context={flight:state.flight||'',callsign:loadedCallsign,tail:state.tail||'',aircraft:state.aircraft||'',origin:state.origin||'',destination:state.destination||'',alternate:state.alternate||'',route:state.route||'',cruise:state.cruise||'',phase:state.phase||'',controller:state.controller||'',frequency:state.frequency||'',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',inferredStage,reportedAltitude:repAlt,simbriefProfile:sb};
 
   try{
-    const r=await fetch('https://api.openai.com/v1/responses',{
-      method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-      body:JSON.stringify({model:'gpt-5.6-luna',input:[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:`SIM STATE:\n${JSON.stringify(context)}\n\nPILOT TRANSMISSION:\n${pilot}`}]}],text:{format:{type:'json_object'}}})
-    });
+    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'gpt-5.6-luna',input:[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:`SIM STATE:\n${JSON.stringify(context)}\n\nPILOT TRANSMISSION:\n${pilot}`}]}],text:{format:{type:'json_object'}}})});
     const j=await r.json();
-    if(!r.ok) return res.status(r.status).json({error:j?.error?.message||'ATC model error'});
-    let text=j.output_text||'';
-    if(!text && Array.isArray(j.output)) for(const item of j.output||[]) for(const c of item.content||[]) if(c.type==='output_text') text+=c.text||'';
+    if(!r.ok)return res.status(r.status).json({error:j?.error?.message||'ATC model error'});
+    let text=j.output_text||''; if(!text&&Array.isArray(j.output))for(const item of j.output||[])for(const c of item.content||[])if(c.type==='output_text')text+=c.text||'';
     let out;try{out=JSON.parse(text)}catch{out={reply:text}};
 
     const previous={controller:String(state.controller||''),frequency:String(state.frequency||''),runway:String(state.runway||''),squawk:String(state.squawk||''),heading:String(state.heading||''),altitude:String(state.altitude||''),speed:String(state.speed||''),clearance:String(state.clearance||''),phase:String(state.phase||'')};
-    for(const k of Object.keys(previous)) if((out[k]===undefined||out[k]===null||String(out[k]).trim()==='')&&previous[k]) out[k]=previous[k];
+    for(const k of Object.keys(previous))if((out[k]===undefined||out[k]===null||String(out[k]).trim()==='')&&previous[k])out[k]=previous[k];
 
     const facilityNames={clearance:'Clearance Delivery',ground:'Ground',tower:'Tower',departure:'Departure',approach:'Approach'};
     const facilityFreqs={ground:'121.8',tower:'120.5',departure:'135.1',approach:'124.9'};
-    if(inferredStage){
-      const target=facilityNames[inferredStage];
-      if(inferredStage==='clearance'){
-        out.controller=previous.controller.toLowerCase().includes('clearance')?previous.controller:'Clearance Delivery';
-        // Do not mislabel the departure frequency as the active Clearance frequency.
-        out.frequency=previous.controller.toLowerCase().includes('clearance')?previous.frequency:'';
-      }else{
-        const prevCtl=previous.controller.toLowerCase(),alreadySame=prevCtl.includes(inferredStage);
-        if(!alreadySame){out.controller=target;if(!out.frequency||out.frequency===previous.frequency)out.frequency=facilityFreqs[inferredStage]}
-        else{out.controller=previous.controller||target;out.frequency=previous.frequency||out.frequency||facilityFreqs[inferredStage]}
-      }
+    if(inferredStage){const target=facilityNames[inferredStage];if(inferredStage==='clearance'){out.controller=previous.controller.toLowerCase().includes('clearance')?previous.controller:'Clearance Delivery';out.frequency=previous.controller.toLowerCase().includes('clearance')?previous.frequency:''}else{const prevCtl=previous.controller.toLowerCase(),alreadySame=prevCtl.includes(inferredStage);if(!alreadySame){out.controller=target;if(!out.frequency||out.frequency===previous.frequency)out.frequency=facilityFreqs[inferredStage]}else{out.controller=previous.controller||target;out.frequency=previous.frequency||out.frequency||facilityFreqs[inferredStage]}}}
+
+    const assigned=altNumber(previous.altitude);
+    const outAlt=altNumber(out.altitude);
+    if(currentController.includes('departure')&&repAlt&&assigned&&repAlt>=assigned-1500&&outAlt<=assigned){
+      const next=nextClimb(sb,assigned,state.cruise);
+      if(next>assigned){out.altitude=String(next);out.clearance=`Climb and maintain ${next.toLocaleString('en-US')}`;out.reply=`${cs}, climb and maintain ${next.toLocaleString('en-US')}.`;out.controller=previous.controller||'Departure';out.frequency=previous.frequency||state.frequency||'125.35';out.phase='Climb'}
     }
 
     return res.status(200).json({ok:true,...out});
