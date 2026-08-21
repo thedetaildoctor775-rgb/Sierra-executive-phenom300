@@ -44,11 +44,11 @@ function normalizeName(s=''){
 
 function matchScore(candidate,requested){
   if(!requested)return 0;
-  const c=normalizeName(candidate), r=normalizeName(requested.split('/')[0]);
+  const c=normalizeName(candidate),r=normalizeName(requested.split('/')[0]);
   if(!c||!r)return 0;
   if(c===r)return 100;
   if(c.includes(r)||r.includes(c))return 80;
-  const ct=new Set(c.split(' ')), rt=r.split(' ');
+  const ct=new Set(c.split(' ')),rt=r.split(' ');
   return rt.reduce((n,w)=>n+(ct.has(w)?10:0),0);
 }
 
@@ -62,26 +62,20 @@ function parsePage(html){
     let cm;
     while((cm=cellRe.exec(rm[1])))cells.push(text(cm[1]));
     if(cells.length<2)continue;
-    const joined=cells.join(' | ');
-    if(!/\$\s*\d/.test(joined))continue;
+    if(!/\$\s*\d/.test(cells.join(' | ')))continue;
     const prices=cells.map(price).filter(n=>n>0);
     if(!prices.length)continue;
     let name='';
     for(const c of cells){
-      if(!/^#?$/.test(c) && !/^\d+$/.test(c) && !/^\$/.test(c) && !/^(jet-?a|100ll)$/i.test(c)){
+      if(!/^#?$/.test(c)&&!/^\d+$/.test(c)&&!/^\$/.test(c)&&!/^(jet-?a|100ll)$/i.test(c)){
         name=c.replace(/\s*Best\s*Price\s*/gi,' ').trim();
         if(name)break;
       }
     }
     if(!name)continue;
-    rows.push({
-      name,
-      jet_a: prices[0]||0,
-      avgas_100ll: prices[1]||0
-    });
+    rows.push({name,jet_a:prices[0]||0,avgas_100ll:prices[1]||0});
   }
 
-  // Fallback for markup changes: capture the rendered FBO list as text.
   if(!rows.length){
     const body=text(html);
     const section=(body.split(/All FBOs at [A-Z0-9]{3,4}/i)[1]||'').split(/Prices may vary/i)[0]||'';
@@ -98,7 +92,7 @@ function parsePage(html){
   return {rows,updated,airportName};
 }
 
-export default async function handler(req,res){
+module.exports=async function handler(req,res){
   if(req.method!=='GET')return send(res,405,{ok:false,error:'Method not allowed'});
   const airport=String(req.query.airport||'').trim().toUpperCase();
   const requested=String(req.query.fbo||'').trim();
@@ -127,9 +121,7 @@ export default async function handler(req,res){
 
     let selected=null,matched=false;
     if(requested){
-      selected=withJet
-        .map(x=>({...x,score:matchScore(x.name,requested)}))
-        .sort((a,b)=>b.score-a.score)[0];
+      selected=withJet.map(x=>({...x,score:matchScore(x.name,requested)})).sort((a,b)=>b.score-a.score)[0];
       matched=!!(selected&&selected.score>=10);
       if(!matched)selected=null;
     }
@@ -164,4 +156,4 @@ export default async function handler(req,res){
       source_url:url
     });
   }
-}
+};
