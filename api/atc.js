@@ -38,6 +38,7 @@ async function simbriefProfile(){
     return {
       route:String(x?.general?.route||x?.general?.route_ifps||''),
       cruise:String(x?.general?.initial_altitude||x?.general?.cruise_altitude||''),
+      departureRunway:String(x?.origin?.plan_rwy||x?.origin?.runway||''),
       fixes:fixes.slice(0,40).map(f=>({
         ident:String(f?.ident||f?.name||''),
         airway:String(f?.via_airway||f?.airway||''),
@@ -65,6 +66,11 @@ function sameRunway(a,b){
   const clean=x=>String(x||'').toUpperCase().replace(/RUNWAY|RWY|\s/g,'');
   return clean(a)&&clean(a)===clean(b);
 }
+function defaultDepartureRunway(origin){
+  const o=String(origin||'').toUpperCase().trim();
+  const known={KSFO:'28L',KVNY:'16R',KRNO:'17R'};
+  return known[o]||'';
+}
 
 export default async function handler(req,res){
   if(req.method!=='POST') return res.status(405).json({error:'POST only'});
@@ -79,44 +85,51 @@ export default async function handler(req,res){
   const cs=loadedCallsign||'Aircraft';
   const p=pilot.toLowerCase();
   const currentController=String(state.controller||'').toLowerCase();
-  const runway=String(state.runway||'').trim();
+  let runway=String(state.runway||'').trim();
 
   const readyForDeparture=/ready for departure|ready for takeoff/.test(p);
   const takeoffReadback=/\b(?:cleared|clear) for takeoff\b/.test(p)&&!readyForDeparture;
   const holdingShort=/holding short|hold short/.test(p);
   const airborne=/\bairborne\b|passing\s+\d|climbing out|positive rate/.test(p);
-  const readyToTaxi=/ready to taxi|request(?:ing)? taxi|\btaxi request\b/.test(p);
+  const readyToTaxi=/ready\s+(?:to|for)\s+taxi(?:s|ing)?\b|request(?:ing)?\s+taxi(?:s)?\b|\btaxi request\b/.test(p);
   const pushback=/ready for pushback|request(?:ing)? pushback|pushback and start|push and start/.test(p);
+  const runwayRecovery=/should have (?:my|the) runway|have my runway|what(?:'s| is) my runway|runway not assigned|intended runway/.test(p);
   const ifrClearanceRequest=/ready for ifr clearance|request(?:ing)? ifr clearance|\bifr clearance\b/.test(p);
   const groundCheckin=/\bground\b/.test(p)&&!/departure frequency|after departure/.test(p);
   const towerCheckin=/\btower\b/.test(p)&&!/contact tower/.test(p);
   const explicitDepartureCheckin=/\b(?:san francisco\s+)?departure\b/.test(p)&&!/departure frequency|after departure|departure runway|departure procedure|departure clearance|contact departure/.test(p);
   const centerCheckin=/\bcenter\b/.test(p)&&!/contact center/.test(p);
   const approachCheckin=/\bapproach\b/.test(p)&&!/contact approach/.test(p);
-  const groundMovement=readyToTaxi||pushback||/taxi to parking|runway vacated|clear of runway/.test(p);
+  const groundMovement=readyToTaxi||pushback||runwayRecovery||/taxi to parking|runway vacated|clear of runway/.test(p);
   const clearanceContext=ifrClearanceRequest || (currentController.includes('clearance') && !groundCheckin && !groundMovement && !readyForDeparture && !holdingShort && !airborne && !explicitDepartureCheckin);
 
-  if(pushback){
-    return res.status(200).json({ok:true,reply:`${cs}, pushback approved, start at your discretion.`,controller:'Ground',frequency:'121.8',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:'Pushback approved; start at your discretion',phase:'Ground'});
+  let runwayProfile=null;
+  if(!runway&&(ifrClearanceRequest||pushback||readyToTaxi||runwayRecovery||currentController.includes('ground')||currentController.includes('clearance'))){
+    runwayProfile=await simbriefProfile();
+    runway=String(runwayProfile?.departureRunway||defaultDepartureRunway(state.origin)||'').toUpperCase().trim();
   }
-  if(readyToTaxi){
-    const rwy=runway||'28L';
+
+  if(pushback){
+    return res.status(200).json({ok:true,reply:`${cs}, pushback approved, start at your discretion.`,controller:'Ground',frequency:'121.8',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:'Pushback approved; start at your discretion',phase:'Ground'});
+  }
+  if(readyToTaxi||runwayRecovery){
+    const rwy=runway||defaultDepartureRunway(state.origin)||'28L';
     return res.status(200).json({ok:true,reply:`${cs}, runway ${rwy}, taxi via Alpha, hold short of runway ${rwy}.`,controller:'Ground',frequency:'121.8',runway:rwy,squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Runway ${rwy}, taxi via Alpha, hold short of runway ${rwy}`,phase:'Ground'});
   }
   if(holdingShort && currentController.includes('ground') && !readyForDeparture){
-    return res.status(200).json({ok:true,reply:`${cs}, readback correct.`,controller:'Ground',frequency:'121.8',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Ground'});
+    return res.status(200).json({ok:true,reply:`${cs}, readback correct.`,controller:'Ground',frequency:'121.8',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Ground'});
   }
   if(takeoffReadback && currentController.includes('tower')){
-    return res.status(200).json({ok:true,reply:`${cs}, readback correct.`,controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
+    return res.status(200).json({ok:true,reply:`${cs}, readback correct.`,controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
   }
   if(readyForDeparture && currentController.includes('ground')){
-    return res.status(200).json({ok:true,reply:`${cs}, contact Tower 120.5.`,controller:'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Tower'});
+    return res.status(200).json({ok:true,reply:`${cs}, contact Tower 120.5.`,controller:'Tower',frequency:'120.5',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Tower'});
   }
   if(readyForDeparture && currentController.includes('tower')){
-    return res.status(200).json({ok:true,reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,controller:state.controller||'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
+    return res.status(200).json({ok:true,reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,controller:state.controller||'Tower',frequency:'120.5',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
   }
   if(holdingShort && currentController.includes('tower') && !readyForDeparture){
-    return res.status(200).json({ok:true,reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,controller:state.controller||'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
+    return res.status(200).json({ok:true,reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,controller:state.controller||'Tower',frequency:'120.5',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
   }
 
   const assignedNow=altNumber(state.altitude);
@@ -125,7 +138,7 @@ export default async function handler(req,res){
     return res.status(200).json({
       ok:true,
       reply:`${cs}, readback correct.`,
-      controller:state.controller||'Departure',frequency:state.frequency||'125.35',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
+      controller:state.controller||'Departure',frequency:state.frequency||'125.35',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',
       altitude:String(assignedNow),speed:state.speed||'',clearance:`Climb and maintain ${assignedNow.toLocaleString('en-US')}`,phase:state.phase||'Climb'
     });
   }
@@ -140,7 +153,7 @@ export default async function handler(req,res){
     clearanceContext?'clearance':'';
 
   const repAlt=reportedAltitude(pilot);
-  const sb=(currentController.includes('departure')||currentController.includes('center')||inferredStage==='departure'||inferredStage==='center')?await simbriefProfile():null;
+  const sb=runwayProfile||((currentController.includes('departure')||currentController.includes('center')||inferredStage==='departure'||inferredStage==='center')?await simbriefProfile():null);
 
   const system=`You are SIERRA ATC, a realistic U.S. FAA-style air traffic controller for a FLIGHT SIMULATOR ONLY. Use concise, natural FAA-style radio phraseology and one controller transmission at a time.
 
@@ -159,6 +172,12 @@ FACILITY STATE MACHINE:
 - A taxi or pushback request can NEVER produce an IFR clearance.
 - A pilot readback containing "cleared for takeoff" is an acknowledgement of Tower's clearance, not a new takeoff request. Respond only with a brief readback acknowledgement and do not issue the takeoff clearance again.
 - Preserve the active controller until a real handoff/check-in.
+
+RUNWAY STATE:
+- Once a departure runway is assigned, preserve it through Clearance, Ground, taxi, and Tower unless an explicit runway change is issued.
+- If SimBrief supplies a planned departure runway, use it as the initial simulated departure runway.
+- Do not ask the pilot to choose or confirm an intended runway just because state.runway is blank. Assign a plausible simulated runway and continue the operation.
+- Speech recognition variants such as "ready for taxis" still mean ready to taxi.
 
 ROUTE / SID PROFILE:
 - SIM STATE.route is authoritative. Never invent or rename route elements.
@@ -183,7 +202,7 @@ READBACKS:
 
 Output strict JSON with keys: reply, controller, frequency, runway, squawk, heading, altitude, speed, clearance, phase. This is simulation, not live ATC.`;
 
-  const context={flight:state.flight||'',callsign:loadedCallsign,tail:state.tail||'',aircraft:state.aircraft||'',origin:state.origin||'',destination:state.destination||'',alternate:state.alternate||'',route:state.route||'',cruise:state.cruise||'',phase:state.phase||'',controller:state.controller||'',frequency:state.frequency||'',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',inferredStage,reportedAltitude:repAlt,simbriefProfile:sb};
+  const context={flight:state.flight||'',callsign:loadedCallsign,tail:state.tail||'',aircraft:state.aircraft||'',origin:state.origin||'',destination:state.destination||'',alternate:state.alternate||'',route:state.route||'',cruise:state.cruise||'',phase:state.phase||'',controller:state.controller||'',frequency:state.frequency||'',runway:runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',inferredStage,reportedAltitude:repAlt,simbriefProfile:sb};
 
   try{
     const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'gpt-5.6-luna',input:[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:`SIM STATE:\n${JSON.stringify(context)}\n\nPILOT TRANSMISSION:\n${pilot}`}]}],text:{format:{type:'json_object'}}})});
@@ -192,7 +211,7 @@ Output strict JSON with keys: reply, controller, frequency, runway, squawk, head
     let text=j.output_text||''; if(!text&&Array.isArray(j.output))for(const item of j.output||[])for(const c of item.content||[])if(c.type==='output_text')text+=c.text||'';
     let out;try{out=JSON.parse(text)}catch{out={reply:text}};
 
-    const previous={controller:String(state.controller||''),frequency:String(state.frequency||''),runway:String(state.runway||''),squawk:String(state.squawk||''),heading:String(state.heading||''),altitude:String(state.altitude||''),speed:String(state.speed||''),clearance:String(state.clearance||''),phase:String(state.phase||'')};
+    const previous={controller:String(state.controller||''),frequency:String(state.frequency||''),runway:String(runway||state.runway||''),squawk:String(state.squawk||''),heading:String(state.heading||''),altitude:String(state.altitude||''),speed:String(state.speed||''),clearance:String(state.clearance||''),phase:String(state.phase||'')};
     for(const k of Object.keys(previous))if((out[k]===undefined||out[k]===null||String(out[k]).trim()==='')&&previous[k])out[k]=previous[k];
 
     const facilityNames={clearance:'Clearance Delivery',ground:'Ground',tower:'Tower',departure:'Departure',center:'Center',approach:'Approach'};
@@ -205,6 +224,13 @@ Output strict JSON with keys: reply, controller, frequency, runway, squawk, head
         out.controller=facilityNames[inferredStage];
         out.frequency=facilityFreqs[inferredStage];
       }
+    }
+
+    if(inferredStage==='clearance'&&!out.runway){
+      out.runway=runway||String(sb?.departureRunway||defaultDepartureRunway(state.origin)||'').toUpperCase();
+    }
+    if(inferredStage==='clearance'&&out.runway&&out.reply&&!/\brunway\b/i.test(out.reply)){
+      out.reply=String(out.reply).replace(/\s*$/,'')+` Runway ${out.runway}.`;
     }
 
     const assigned=altNumber(previous.altitude);
