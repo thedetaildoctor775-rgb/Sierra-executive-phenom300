@@ -4,10 +4,11 @@
       "includeFiles": "legacy.html"
     }
   },
-  "rewrites": [
+  "redirects": [
     {
       "source": "/legacy.html",
-      "destination": "/api/legacy"
+      "destination": "/api/legacy",
+      "permanent": false
     }
   ]
 }
