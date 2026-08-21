@@ -64,6 +64,7 @@ export default async function handler(req,res){
   const runway=String(state.runway||'').trim();
 
   const readyForDeparture=/ready for departure|ready for takeoff/.test(p);
+  const takeoffReadback=/\b(?:cleared|clear) for takeoff\b/.test(p)&&!readyForDeparture;
   const holdingShort=/holding short|hold short/.test(p);
   const airborne=/\bairborne\b|passing\s+\d|climbing out|positive rate/.test(p);
   const readyToTaxi=/ready to taxi|request(?:ing)? taxi|\btaxi request\b/.test(p);
@@ -85,6 +86,9 @@ export default async function handler(req,res){
     const rwy=runway||'28L';
     return res.status(200).json({ok:true,reply:`${cs}, runway ${rwy}, taxi via Alpha, hold short of runway ${rwy}.`,controller:'Ground',frequency:'121.8',runway:rwy,squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:`Runway ${rwy}, taxi via Alpha, hold short of runway ${rwy}`,phase:'Ground'});
   }
+  if(takeoffReadback && currentController.includes('tower')){
+    return res.status(200).json({ok:true,reply:`${cs}, readback correct.`,controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||`Cleared for takeoff runway ${runway||'assigned'}`,phase:'Takeoff'});
+  }
   if(readyForDeparture && currentController.includes('ground')){
     return res.status(200).json({ok:true,reply:`${cs}, contact Tower 120.5.`,controller:'Tower',frequency:'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Tower'});
   }
@@ -98,7 +102,7 @@ export default async function handler(req,res){
   const inferredStage=
     /runway vacated|clear of runway|taxi to parking/.test(p)?'ground':
     groundMovement||groundCheckin?'ground':
-    towerCheckin||readyForDeparture||holdingShort?'tower':
+    towerCheckin||readyForDeparture||holdingShort||takeoffReadback?'tower':
     approachCheckin||/ready for descent|descending|established|final|landing/.test(p)?'approach':
     centerCheckin?'center':
     explicitDepartureCheckin||airborne?'departure':
@@ -121,6 +125,7 @@ FACILITY STATE MACHINE:
 - Center handles enroute climb/cruise.
 - Approach handles arrival/descent before Tower.
 - A taxi or pushback request can NEVER produce an IFR clearance.
+- A pilot readback containing "cleared for takeoff" is an acknowledgement of Tower's clearance, not a new takeoff request. Respond only with a brief readback acknowledgement and do not issue the takeoff clearance again.
 - Preserve the active controller until a real handoff/check-in.
 
 ROUTE / SID PROFILE:
@@ -173,7 +178,6 @@ Output strict JSON with keys: reply, controller, frequency, runway, squawk, head
     if(currentController.includes('departure')&&repAlt&&assigned&&repAlt>=assigned-1500&&outAlt<=assigned){
       const next=nextClimb(sb,assigned,state.cruise);
       if(next>assigned){
-        // Above the terminal climb, transition toward Center rather than keeping Departure forever.
         if(assigned>=18000||next>=28000){
           out.reply=`${cs}, contact Center 127.45.`;
           out.controller='Center';out.frequency='127.45';out.phase='Center';
@@ -183,7 +187,6 @@ Output strict JSON with keys: reply, controller, frequency, runway, squawk, head
       }
     }
 
-    // Protect an assigned runway from casual model drift.
     if(previous.runway&&out.runway&&!sameRunway(previous.runway,out.runway)&&!String(out.reply||'').toLowerCase().includes('runway change'))out.runway=previous.runway;
 
     return res.status(200).json({ok:true,...out});
