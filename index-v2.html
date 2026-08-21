@@ -5,52 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0B0B0B">
-<title>Sierra Executive — Ops Control</title>
+<title>Sierra Executive</title>
 <style>
-html,body{margin:0;width:100%;height:100%;background:#0B0B0B;overflow:hidden}
-#appFrame{display:block;width:100%;height:100%;border:0;background:#0B0B0B}
+:root{--bg:#0B0B0B;--panel:#111;--line:#24484c;--text:#fff;--muted:#9eb2b4;--accent:#2FE3F2;--accent2:#1BB6C4}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+.shell{height:100%;display:grid;grid-template-rows:auto 1fr}.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;background:#090909;border-bottom:1px solid var(--line)}
+.brand{min-width:max-content}.brand b{font-family:Georgia,serif;letter-spacing:.24em;color:var(--accent);font-size:18px}.brand span{display:block;color:var(--muted);font-size:9px;letter-spacing:.14em;margin-top:2px}.tabs{display:flex;gap:7px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{border:1px solid var(--line);background:#101010;color:var(--muted);padding:9px 13px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer}.tab.active{color:var(--accent);border-color:#28727b;background:#0d191a;box-shadow:inset 0 -2px 0 var(--accent)}
+.framewrap{min-height:0;background:#000}.frame{display:none;width:100%;height:100%;border:0;background:#000}.frame.active{display:block}
+@media(max-width:700px){.topbar{display:block;padding:8px}.brand{display:none}.tabs{width:100%}.tab{padding:9px 11px;font-size:11px}}
 </style>
 </head>
 <body>
-<iframe id="appFrame" src="/index.html" title="Sierra Executive Ops Control"></iframe>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand"><b>SIERRA</b><span>EXECUTIVE • OPERATIONS</span></div>
+    <div class="tabs">
+      <button class="tab active" data-target="career">Career OS</button>
+      <button class="tab" data-target="atc">ATC</button>
+    </div>
+  </div>
+  <div class="framewrap">
+    <iframe id="career" class="frame active" src="/legacy.html" title="Sierra Executive Career OS"></iframe>
+    <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
+  </div>
+</div>
 <script>
-const frame=document.getElementById('appFrame');
-function injectShellTheme(){
-  try{
-    const d=frame.contentDocument;
-    if(!d||!d.head)return;
-    const existing=d.getElementById('sierra-shell-refresh');
-    if(existing)existing.remove();
-    const style=d.createElement('style');
-    style.id='sierra-shell-refresh';
-    style.textContent=`
-      :root{--bg:#0B0B0B!important;--panel:#121212!important;--line:#24484c!important;--text:#ffffff!important;--muted:#9eb2b4!important;--gold:#2FE3F2!important;--green:#1BB6C4!important}
-      body{background:#0B0B0B!important}
-      .app{display:block!important;min-height:100vh!important}
-      .side{position:sticky!important;top:0!important;z-index:100!important;height:auto!important;overflow:visible!important;border-right:0!important;border-bottom:1px solid var(--line)!important;background:#090909!important;padding:10px 16px!important;display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;align-items:center!important;gap:14px!important}
-      .brand{padding:0 16px 0 0!important;margin:0!important;border-bottom:0!important;border-right:1px solid var(--line)!important;white-space:nowrap!important}
-      .brand b{color:var(--gold)!important}
-      .nav{display:flex!important;grid-template-columns:none!important;gap:6px!important;overflow-x:auto!important;white-space:nowrap!important;scrollbar-width:none!important}
-      .nav::-webkit-scrollbar{display:none!important}
-      .nav button,.nav a{flex:0 0 auto!important;padding:9px 11px!important;border-radius:8px!important;text-align:center!important;border:1px solid transparent!important}
-      .nav button.active{background:#10191a!important;color:var(--gold)!important;border-color:#23656d!important;border-left:1px solid #23656d!important;box-shadow:inset 0 -2px 0 var(--gold)!important}
-      .nav a.atc{color:var(--gold)!important;border:1px solid #23656d!important;background:#0d1718!important;margin:0!important}
-      .sidecard{display:none!important}
-      .main{padding:20px 22px 40px!important;max-width:1600px!important;margin:0 auto!important}
-      .hero{background:linear-gradient(135deg,#111718,#0d0f10)!important}
-      .btn{border-color:#23656d!important;background:#0d1718!important;color:var(--gold)!important}
-      .btn.secondary{background:#111!important;color:var(--text)!important;border-color:var(--line)!important}
-      .btn.green{background:#0d1d1f!important;color:var(--green)!important;border-color:#23656d!important}
-      .pill.gold,.pill.green{border-color:#23656d!important}
-      textarea{background:#090d0e!important}
-      @media(max-width:900px){.side{grid-template-columns:1fr!important}.brand{border-right:0!important;border-bottom:1px solid var(--line)!important;padding:0 0 8px!important}.main{padding:14px!important}}
-      @media(max-width:640px){.side{padding:8px!important;gap:8px!important}.brand{display:none!important}.nav button,.nav a{font-size:11px!important;padding:9px 10px!important}.main{padding:12px!important}}
-    `;
-    d.head.appendChild(style);
-  }catch(e){}
-}
-frame.addEventListener('load',()=>{injectShellTheme();setTimeout(injectShellTheme,250)});
-setInterval(injectShellTheme,2000);
+const tabs=[...document.querySelectorAll('.tab')];
+const frames=[...document.querySelectorAll('.frame')];
+tabs.forEach(tab=>tab.addEventListener('click',()=>{
+  tabs.forEach(x=>x.classList.remove('active'));
+  frames.forEach(x=>x.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById(tab.dataset.target).classList.add('active');
+}));
 </script>
 </body>
 </html>
