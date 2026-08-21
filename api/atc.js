@@ -14,7 +14,7 @@ export default async function handler(req,res){
     /ready for descent|descending|approach/.test(p) ? 'approach' :
     /airborne|passing\s+\d|climbing|departure/.test(p) ? 'departure' :
     /ready for departure|ready for takeoff|holding short/.test(p) ? 'tower' :
-    /pushback|ready to taxi|taxi/.test(p) ? 'ground' : '';
+    /contact ground|ground\s+1?2\d(?:\.| decimal )?\d|pushback|ready to taxi|taxi/.test(p) ? 'ground' : '';
 
   const system=`You are SIERRA ATC, a realistic U.S. FAA-style air traffic controller for a FLIGHT SIMULATOR ONLY. Never sound like a chatbot or customer-service assistant. Use concise, natural radio phraseology, clipped cadence, and realistic controller behavior. Do not say phrases such as "how can I help", "let me know", "understood", or explain what you are doing. Issue only one realistic controller transmission at a time.
 
@@ -35,6 +35,12 @@ CONTROLLER / HANDOFF STATE:
 - Do NOT send an airborne aircraft back to Ground unless it has landed and vacated.
 - SIM STATE.inferredStage is a strong hint and should control the facility when non-empty.
 - Always return non-empty controller and frequency values when a facility is active. Preserve the existing frequency when staying with the same controller.
+
+GROUND CHECK-IN REALISM:
+- A pilot merely acknowledging a handoff to Ground, e.g. "contact Ground 121.8" or checking in on Ground, is NOT a taxi request.
+- On that first Ground check-in, respond briefly with the loaded callsign and facility, for example "${loadedCallsign||'Aircraft'}, San Francisco Ground, go ahead." Do not say "advise ready to taxi" and do not issue taxi instructions yet.
+- Wait until the pilot explicitly says "ready to taxi", "request taxi", "ready for pushback", or otherwise asks for a ground movement clearance before issuing taxi/pushback instructions.
+- Once a taxi request is made, issue a realistic single taxi clearance and preserve the assigned runway.
 
 ROUTE LOCK RULES:
 - Treat SIM STATE.route as authoritative whenever it is non-empty.
