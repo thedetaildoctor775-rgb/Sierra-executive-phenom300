@@ -40,9 +40,9 @@ export default async function handler(req,res){
   if(holdingShort && currentController.includes('tower') && !readyForDeparture){
     return res.status(200).json({
       ok:true,
-      reply:`${cs}, roger.`,
+      reply:`${cs}, runway ${runway||'assigned'}, cleared for takeoff.`,
       controller:state.controller||'Tower',frequency:state.frequency||'120.5',runway:state.runway||'',squawk:state.squawk||'',heading:state.heading||'',
-      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:state.phase||'Tower'
+      altitude:state.altitude||'',speed:state.speed||'',clearance:state.clearance||'',phase:'Takeoff'
     });
   }
 
@@ -72,8 +72,8 @@ CONTROLLER / HANDOFF STATE:
 - Approach begins during descent/arrival sequencing.
 - Ground resumes only after the aircraft has vacated the runway.
 - A transmission containing "ready for departure" or "ready for takeoff" is a TOWER-stage event, never Departure control.
-- If the aircraft is already on Tower and reports ready for departure, issue a takeoff clearance when operationally appropriate instead of repeating hold-short indefinitely.
-- If the pilot merely reads back "holding short", acknowledge briefly; do not repeat the same hold-short instruction unless there is a reason.
+- Once the aircraft is on Tower and reports holding short of the assigned runway, clear it for takeoff in this simulator flow unless a specific simulated conflict has been established.
+- Do NOT reply only "roger" to a holding-short report when the aircraft is waiting for departure and no conflicting traffic state exists.
 - Do NOT tell a parked or taxiing aircraft to contact Departure.
 - Do NOT send an airborne aircraft back to Ground unless it has landed and vacated.
 - SIM STATE.inferredStage is a strong hint and should control the facility when non-empty.
