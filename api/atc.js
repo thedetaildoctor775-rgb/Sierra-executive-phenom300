@@ -15,6 +15,10 @@ export default async function handler(req,res){
   const readyForDeparture=/ready for departure|ready for takeoff/.test(p);
   const holdingShort=/holding short|hold short/.test(p);
   const airborne=/airborne|passing\s+\d|climbing out|positive rate/.test(p);
+  const ifrClearanceRequest=/ready for ifr clearance|request(?:ing)? ifr clearance|ifr clearance/.test(p);
+  const groundCheckin=/\bground\b/.test(p)&&!/departure frequency|after departure/.test(p);
+  const explicitDepartureCheckin=/\b(?:san francisco\s+)?departure\b/.test(p)&&!/departure frequency|after departure|departure runway|departure procedure|departure clearance/.test(p);
+  const clearanceContext=ifrClearanceRequest || (currentController.includes('clearance') && !groundCheckin && !readyForDeparture && !holdingShort && !airborne && !explicitDepartureCheckin);
 
   // Deterministic departure sequencing prevents Ground/Tower loops.
   if(readyForDeparture && currentController.includes('ground')){
@@ -46,7 +50,8 @@ export default async function handler(req,res){
     /established|final|landing/.test(p) ? 'tower' :
     /ready for descent|descending|approach/.test(p) ? 'approach' :
     readyForDeparture||holdingShort ? 'tower' :
-    airborne||/\bdeparture\b|climb and maintain|radar contact/.test(p) ? 'departure' :
+    clearanceContext ? 'clearance' :
+    airborne||explicitDepartureCheckin ? 'departure' :
     /contact ground|ground\s+1?2\d(?:\.| decimal )?\d|pushback|ready to taxi|request taxi|\btaxi\b/.test(p) ? 'ground' : '';
 
   const system=`You are SIERRA ATC, a realistic U.S. FAA-style air traffic controller for a FLIGHT SIMULATOR ONLY. Never sound like a chatbot or customer-service assistant. Use concise, natural radio phraseology, clipped cadence, and realistic controller behavior. Do not say phrases such as "how can I help", "let me know", "understood", or explain what you are doing. Issue only one realistic controller transmission at a time.
@@ -59,9 +64,11 @@ CALLSIGN LOCK:
 
 CONTROLLER / HANDOFF STATE:
 - Stay with the current facility until an operationally appropriate handoff.
-- Ground handles clearance follow-up, pushback, and taxi.
+- Clearance Delivery remains the active controller through the entire IFR clearance and all clearance readbacks, even when phrases such as "departure frequency", "after departure", or a departure procedure are spoken.
+- The word "departure" inside an IFR clearance does NOT mean the aircraft is talking to Departure Control.
+- Ground handles clearance follow-up, pushback, and taxi after the pilot checks in with Ground.
 - Tower handles runway crossing, line-up, takeoff clearance, landing clearance, and immediate runway operations.
-- Departure begins only AFTER takeoff / airborne or after Tower explicitly hands the aircraft off.
+- Departure begins only AFTER takeoff / airborne or when the pilot explicitly checks in with a Departure controller.
 - Approach begins during descent/arrival sequencing.
 - Ground resumes only after the aircraft has vacated the runway.
 - A transmission containing "ready for departure" or "ready for takeoff" is a TOWER-stage event, never Departure control.
@@ -70,7 +77,7 @@ CONTROLLER / HANDOFF STATE:
 - Do NOT tell a parked or taxiing aircraft to contact Departure.
 - Do NOT send an airborne aircraft back to Ground unless it has landed and vacated.
 - SIM STATE.inferredStage is a strong hint and should control the facility when non-empty.
-- Always return non-empty controller and frequency values when a facility is active. Preserve the existing frequency when staying with the same controller.
+- Always preserve the currently active controller unless there is an actual handoff/check-in event.
 
 GROUND CHECK-IN REALISM:
 - A pilot merely acknowledging a handoff to Ground, e.g. "contact Ground 121.8" or checking in on Ground, is NOT a taxi request.
@@ -100,7 +107,7 @@ READBACK HANDLING:
 - Do not recite the entire clearance again just because one word was garbled.
 - Do not introduce new route content while correcting a readback.
 
-Use plausible simulated runway/taxi/altitude/heading/speed/frequency/squawk assignments based on the supplied simulated flight context. If an exact real-world frequency/runway cannot be known from context, choose a plausible simulated value rather than claiming it is live data. Output strict JSON with keys: reply, controller, frequency, runway, squawk, heading, altitude, speed, clearance, phase. Values may be empty strings except controller/frequency when a facility is active. This is simulation, not real-world ATC.`;
+Use plausible simulated runway/taxi/altitude/heading/speed/frequency/squawk assignments based on the supplied simulated flight context. If an exact real-world frequency/runway cannot be known from context, choose a plausible simulated value rather than claiming it is live data. Output strict JSON with keys: reply, controller, frequency, runway, squawk, heading, altitude, speed, clearance, phase. Values may be empty strings. This is simulation, not real-world ATC.`;
 
   const context={
     flight:state.flight||'',callsign:loadedCallsign,tail:state.tail||'',aircraft:state.aircraft||'',
@@ -123,12 +130,19 @@ Use plausible simulated runway/taxi/altitude/heading/speed/frequency/squawk assi
     const previous={controller:String(state.controller||''),frequency:String(state.frequency||''),runway:String(state.runway||''),squawk:String(state.squawk||''),heading:String(state.heading||''),altitude:String(state.altitude||''),speed:String(state.speed||''),clearance:String(state.clearance||''),phase:String(state.phase||'')};
     for(const k of Object.keys(previous)) if((out[k]===undefined||out[k]===null||String(out[k]).trim()==='')&&previous[k]) out[k]=previous[k];
 
-    const facilityNames={ground:'Ground',tower:'Tower',departure:'Departure',approach:'Approach'};
+    const facilityNames={clearance:'Clearance Delivery',ground:'Ground',tower:'Tower',departure:'Departure',approach:'Approach'};
     const facilityFreqs={ground:'121.8',tower:'120.5',departure:'135.1',approach:'124.9'};
     if(inferredStage){
-      const prevCtl=previous.controller.toLowerCase(),target=facilityNames[inferredStage],alreadySame=prevCtl.includes(inferredStage);
-      if(!alreadySame){out.controller=target;if(!out.frequency||out.frequency===previous.frequency)out.frequency=facilityFreqs[inferredStage]}
-      else{out.controller=previous.controller||target;out.frequency=previous.frequency||out.frequency||facilityFreqs[inferredStage]}
+      const target=facilityNames[inferredStage];
+      if(inferredStage==='clearance'){
+        out.controller=previous.controller.toLowerCase().includes('clearance')?previous.controller:'Clearance Delivery';
+        // Do not mislabel the departure frequency as the active Clearance frequency.
+        out.frequency=previous.controller.toLowerCase().includes('clearance')?previous.frequency:'';
+      }else{
+        const prevCtl=previous.controller.toLowerCase(),alreadySame=prevCtl.includes(inferredStage);
+        if(!alreadySame){out.controller=target;if(!out.frequency||out.frequency===previous.frequency)out.frequency=facilityFreqs[inferredStage]}
+        else{out.controller=previous.controller||target;out.frequency=previous.frequency||out.frequency||facilityFreqs[inferredStage]}
+      }
     }
 
     return res.status(200).json({ok:true,...out});
