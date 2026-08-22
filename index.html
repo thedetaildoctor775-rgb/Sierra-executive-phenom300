@@ -25,7 +25,7 @@
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20260821-fleetsync" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -38,6 +38,20 @@ tabs.forEach(tab=>tab.addEventListener('click',()=>{
   tab.classList.add('active');
   document.getElementById(tab.dataset.target).classList.add('active');
 }));
+
+const careerFrame=document.getElementById('career');
+careerFrame.addEventListener('load',()=>{
+  try{
+    const doc=careerFrame.contentDocument;
+    if(!doc||doc.getElementById('fleetSyncFixScript'))return;
+    const script=doc.createElement('script');
+    script.id='fleetSyncFixScript';
+    script.src='/fleet-sync-fix.js?v=20260821-1';
+    doc.body.appendChild(script);
+  }catch(err){
+    console.error('Could not install Sierra fleet sync fix',err);
+  }
+});
 </script>
 </body>
 </html>
