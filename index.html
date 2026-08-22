@@ -25,7 +25,7 @@
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html?v=20260821-fleetsync2" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20260821-fleetsync3" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -43,13 +43,23 @@ const careerFrame=document.getElementById('career');
 careerFrame.addEventListener('load',()=>{
   try{
     const doc=careerFrame.contentDocument;
-    if(!doc||doc.getElementById('fleetSyncFixScript'))return;
-    const script=doc.createElement('script');
-    script.id='fleetSyncFixScript';
-    script.src='/fleet-sync-fix.js?v=20260821-2';
-    doc.body.appendChild(script);
+    if(!doc)return;
+
+    if(!doc.getElementById('fleetSyncFixScript')){
+      const script=doc.createElement('script');
+      script.id='fleetSyncFixScript';
+      script.src='/fleet-sync-fix.js?v=20260821-3';
+      doc.body.appendChild(script);
+    }
+
+    if(!doc.getElementById('availabilityBannerFixScript')){
+      const bannerFix=doc.createElement('script');
+      bannerFix.id='availabilityBannerFixScript';
+      bannerFix.src='/availability-banner-fix.js?v=20260821-1';
+      doc.body.appendChild(bannerFix);
+    }
   }catch(err){
-    console.error('Could not install Sierra fleet sync fix',err);
+    console.error('Could not install Sierra Career OS fixes',err);
   }
 });
 </script>
