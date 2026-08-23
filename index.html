@@ -25,7 +25,7 @@
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html?v=20260823-kmev4" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20260823-loc1" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -51,6 +51,7 @@ careerFrame.addEventListener('load',()=>{
       doc.body.appendChild(s);
     });
     loadScript('fleetSyncFixScript','/fleet-sync-fix.js?v=20260823-kmev4')
+      .then(()=>loadScript('perAircraftLocationFixScript','/per-aircraft-location-fix.js?v=20260823-loc1'))
       .then(()=>loadScript('homeBaseFixScript','/home-base-fix.js?v=20260823-kmev4'))
       .then(()=>loadScript('availabilityBannerFixScript','/availability-banner-fix.js?v=20260821-1'))
       .then(()=>loadScript('westCoastMarketScript','/market-boost.js?v=20260823-west4'));
