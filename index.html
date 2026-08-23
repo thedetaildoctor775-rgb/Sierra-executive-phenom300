@@ -25,7 +25,7 @@
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html?v=20260823-westmarket2" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20260823-kmev3" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -45,26 +45,17 @@ careerFrame.addEventListener('load',()=>{
     const doc=careerFrame.contentDocument;
     if(!doc)return;
 
-    if(!doc.getElementById('fleetSyncFixScript')){
-      const script=doc.createElement('script');
-      script.id='fleetSyncFixScript';
-      script.src='/fleet-sync-fix.js?v=20260821-3';
-      doc.body.appendChild(script);
-    }
+    const loadScript=(id,src)=>new Promise(resolve=>{
+      if(doc.getElementById(id)){resolve();return;}
+      const s=doc.createElement('script');
+      s.id=id;s.src=src;s.onload=()=>resolve();s.onerror=()=>resolve();
+      doc.body.appendChild(s);
+    });
 
-    if(!doc.getElementById('availabilityBannerFixScript')){
-      const bannerFix=doc.createElement('script');
-      bannerFix.id='availabilityBannerFixScript';
-      bannerFix.src='/availability-banner-fix.js?v=20260821-1';
-      doc.body.appendChild(bannerFix);
-    }
-
-    if(!doc.getElementById('westCoastMarketScript')){
-      const marketScript=doc.createElement('script');
-      marketScript.id='westCoastMarketScript';
-      marketScript.src='/market-boost.js?v=20260823-west2';
-      doc.body.appendChild(marketScript);
-    }
+    loadScript('fleetSyncFixScript','/fleet-sync-fix.js?v=20260823-kmev3')
+      .then(()=>loadScript('homeBaseFixScript','/home-base-fix.js?v=20260823-kmev3'))
+      .then(()=>loadScript('availabilityBannerFixScript','/availability-banner-fix.js?v=20260821-1'))
+      .then(()=>loadScript('westCoastMarketScript','/market-boost.js?v=20260823-west3'));
   }catch(err){
     console.error('Could not install Sierra Career OS fixes',err);
   }
