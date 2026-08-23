@@ -2,10 +2,13 @@
 'use strict';
 
 const HOME_BASE='KMEV';
-
-function busyWorkflow(){
-  return ['accepted','duty','fuel','boarded','ready','departed','landed','parked'].includes(String(state?.workflow||'').toLowerCase());
-}
+const REPAIR_KEY='sierra_aircraft_location_repair_20260823_v1';
+const CORRECT_LOCATIONS={
+  N24NV:'KVNY',
+  N72LX:'KBUR',
+  N88SX:'KAPC',
+  N300SE:'KMEV'
+};
 
 function activeTail(){
   const t=state?.activeAircraft||state?.activeAssignment?.aircraft||state?.selectedAircraft;
@@ -29,6 +32,24 @@ function restoreOtherLocations(saved){
   Object.values(state.fleet).forEach(a=>{if(a)a.home=HOME_BASE;});
   state.homeBase=HOME_BASE;
   state.operatorHomeBase=HOME_BASE;
+}
+
+function applyOneTimeRepair(){
+  try{
+    if(localStorage.getItem(REPAIR_KEY)==='done')return;
+    if(!state?.fleet)return;
+    Object.entries(CORRECT_LOCATIONS).forEach(([tail,loc])=>{
+      if(state.fleet[tail]){
+        state.fleet[tail].location=loc;
+        state.fleet[tail].home=HOME_BASE;
+      }
+    });
+    state.homeBase=HOME_BASE;
+    state.operatorHomeBase=HOME_BASE;
+    try{saveState();}catch(e){}
+    try{if(typeof scheduleCloudSave==='function')scheduleCloudSave();}catch(e){}
+    localStorage.setItem(REPAIR_KEY,'done');
+  }catch(e){console.warn('One-time fleet location repair failed',e);}
 }
 
 function repairFleetCards(){
@@ -105,10 +126,10 @@ if(typeof resetFlight==='function'){
   };
 }
 
-// Repaint after legacy/cloud renders without changing stored positions.
-setTimeout(repairFleetCards,300);
+applyOneTimeRepair();
+setTimeout(()=>{applyOneTimeRepair();repairFleetCards();},300);
 setTimeout(repairFleetCards,1200);
 setInterval(repairFleetCards,2500);
 
-console.info('Sierra Per-Aircraft Location Fix v1 active');
+console.info('Sierra Per-Aircraft Location Fix v2 active');
 })();
