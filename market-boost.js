@@ -4,7 +4,7 @@
   window.__sxWestCoastMarketRuntime=true;
 
   const AIRPORTS={
-    KRNO:{r:'sierra'},KTRK:{r:'sierra'},KTVL:{r:'sierra'},KMMH:{r:'sierra'},
+    KMEV:{r:'sierra'},KRNO:{r:'sierra'},KTRK:{r:'sierra'},KTVL:{r:'sierra'},KMMH:{r:'sierra'},
     KSFO:{r:'bay'},KOAK:{r:'bay'},KSJC:{r:'bay'},KSQL:{r:'bay'},KHWD:{r:'bay'},KCCR:{r:'bay'},KAPC:{r:'bay'},KSTS:{r:'bay'},
     KMRY:{r:'centralca'},KSNS:{r:'centralca'},KSMF:{r:'centralca'},KSAC:{r:'centralca'},KMHR:{r:'centralca'},KSBP:{r:'centralca'},KSMX:{r:'centralca'},KSBA:{r:'centralca'},KIZA:{r:'centralca'},
     KLAX:{r:'socal'},KVNY:{r:'socal'},KBUR:{r:'socal'},KSMO:{r:'socal'},KLGB:{r:'socal'},KSNA:{r:'socal'},KONT:{r:'socal'},KCMA:{r:'socal'},KSAN:{r:'socal'},KMYF:{r:'socal'},KCRQ:{r:'socal'},KPSP:{r:'socal'},
@@ -13,13 +13,13 @@
   };
 
   const REGION_POOLS={
-    sierra:['KSFO','KOAK','KSJC','KSQL','KSTS','KSMF','KMRY','KSBP','KSBA','KVNY','KLAX','KPSP','KLAS','KHND','KPDX','KSEA'],
-    bay:['KRNO','KTRK','KTVL','KSMF','KMRY','KSTS','KAPC','KSBA','KSBP','KVNY','KLAX','KSNA','KSAN','KPSP','KPDX','KSEA','KHND'],
-    centralca:['KRNO','KSFO','KOAK','KSJC','KSMF','KSTS','KVNY','KLAX','KBUR','KSNA','KSAN','KPSP','KLAS','KHND','KPDX','KSEA'],
-    socal:['KSFO','KOAK','KSJC','KMRY','KSMF','KSBP','KSBA','KPSP','KLAS','KHND','KSDL','KPHX','KRNO','KTRK','KPDX','KSEA'],
-    pnw:['KSEA','KBFI','KPAE','KPDX','KHIO','KEUG','KRDM','KMFR','KGEG','KSFO','KOAK','KSJC','KRNO','KTRK','KSMF','KVNY','KLAX','KBOI'],
-    desert:['KVNY','KLAX','KSNA','KSAN','KPSP','KSFO','KOAK','KRNO','KTRK','KSLC','KBOI','KPDX','KSEA'],
-    mountain:['KRNO','KTRK','KSFO','KVNY','KLAX','KLAS','KSDL','KPHX','KPDX','KSEA']
+    sierra:['KMEV','KRNO','KTRK','KTVL','KSFO','KOAK','KSJC','KSQL','KSTS','KSMF','KMRY','KSBP','KSBA','KVNY','KLAX','KPSP','KLAS','KHND','KPDX','KSEA'],
+    bay:['KMEV','KRNO','KTRK','KTVL','KSMF','KMRY','KSTS','KAPC','KSBA','KSBP','KVNY','KLAX','KSNA','KSAN','KPSP','KPDX','KSEA','KHND'],
+    centralca:['KMEV','KRNO','KSFO','KOAK','KSJC','KSMF','KSTS','KVNY','KLAX','KBUR','KSNA','KSAN','KPSP','KLAS','KHND','KPDX','KSEA'],
+    socal:['KMEV','KSFO','KOAK','KSJC','KMRY','KSMF','KSBP','KSBA','KPSP','KLAS','KHND','KSDL','KPHX','KRNO','KTRK','KPDX','KSEA'],
+    pnw:['KSEA','KBFI','KPAE','KPDX','KHIO','KEUG','KRDM','KMFR','KGEG','KSFO','KOAK','KSJC','KMEV','KRNO','KTRK','KSMF','KVNY','KLAX','KBOI'],
+    desert:['KVNY','KLAX','KSNA','KSAN','KPSP','KSFO','KOAK','KMEV','KRNO','KTRK','KSLC','KBOI','KPDX','KSEA'],
+    mountain:['KMEV','KRNO','KTRK','KSFO','KVNY','KLAX','KLAS','KSDL','KPHX','KPDX','KSEA']
   };
 
   const PROFILES=[
@@ -74,7 +74,7 @@
 
   function sxWestCoastMarket(silent){
     ensureFleet110();
-    const base=String(selectedAircraft().location||'KRNO').toUpperCase();
+    const base=String(selectedAircraft().location||state.homeBase||'KMEV').toUpperCase();
     state.marketBoard=Array.isArray(state.marketBoard)?state.marketBoard:[];
     const now=Date.now();
     const protectedRows=state.marketBoard.filter(x=>x&&(x.protected===true||x.manual===true||x.jobType==='CONTRACT'||x.status==='Accepted'));
@@ -108,18 +108,28 @@
     }
 
     state.marketBoard=[...protectedRows,...generated];
-    state.marketRevision='West Coast Diverse Market v2.2 Real Baggage + Rush';
+    state.marketRevision='West Coast Diverse Market v2.3 KMEV Home Base';
     state.marketLocation=base;
     state.marketSeeded=true;
     saveState();
     if(!silent&&typeof renderMarket==='function')renderMarket();
-    if(!silent&&typeof g==='function'&&g('marketStatus'))g('marketStatus').textContent='West Coast charter market active from '+base+' — realistic baggage plus scheduled and last-minute charter opportunities.';
+    if(!silent&&typeof g==='function'&&g('marketStatus'))g('marketStatus').textContent='West Coast charter market active from '+base+' — KMEV home base, realistic baggage, scheduled and last-minute charter opportunities.';
   }
 
   const originalSeedMarket=seedMarket;
   seedMarket=function(silent){originalSeedMarket(silent);sxWestCoastMarket(silent)};
   window.sxWestCoastMarket=sxWestCoastMarket;
   window.sxBalancedMarket=sxWestCoastMarket;
+
+  function loadHomeBase(){
+    if(document.getElementById('sierraHomeBaseRuntime'))return;
+    const s=document.createElement('script');
+    s.id='sierraHomeBaseRuntime';
+    s.src='/home-base-fix.js?v=20260823-kmev1';
+    s.onload=()=>sxWestCoastMarket(false);
+    document.body.appendChild(s);
+  }
+  loadHomeBase();
   sxWestCoastMarket(false);
   setTimeout(()=>sxWestCoastMarket(false),1200);
 
