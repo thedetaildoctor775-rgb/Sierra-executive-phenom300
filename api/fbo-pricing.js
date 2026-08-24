@@ -14,10 +14,8 @@ function parseFboAirport(html){
 }
 
 function airnavFuelPair(scope){
-  // Airport overview layout: "100LL Jet A FS $8.99 $10.49". First value is 100LL, second is Jet-A.
   let m=scope.match(/100LL\s+Jet\s*A\s+(?:FS|Full\s+service)\s*\$\s*([0-9]+(?:\.[0-9]+)?)\s*\$\s*([0-9]+(?:\.[0-9]+)?)/i);
   if(m)return {avgas_100ll:Number(m[1]),jet_a:Number(m[2])};
-  // Individual FBO page layout.
   const av=(scope.match(/100LL(?:\s+Avgas)?\s+Full\s+service\s*\$\s*([0-9]+(?:\.[0-9]+)?)/i)||[])[1];
   const jet=(scope.match(/Jet\s*A\s+Full\s+service\s*\$\s*([0-9]+(?:\.[0-9]+)?)/i)||[])[1];
   if(jet)return {avgas_100ll:Number(av)||0,jet_a:Number(jet)};
@@ -25,9 +23,8 @@ function airnavFuelPair(scope){
 }
 
 function parseAirNav(html,requested=''){
-  const body=clean(html),rows=[];const req=String(requested||'').split('/')[0].trim();
+  const full=clean(html);const body=full.split(/Alternatives at nearby airports/i)[0];const rows=[];const req=String(requested||'').split('/')[0].trim();
   if(req){const idx=body.toLowerCase().indexOf(req.toLowerCase());if(idx>=0){const pair=airnavFuelPair(body.slice(idx,idx+2600));if(pair)rows.push({name:req,...pair});}}
-  // Parse every airport-page fuel table pair so we can still choose the lowest live Jet-A when the requested FBO name is stale or different.
   const re=/100LL\s+Jet\s*A\s+(?:FS|Full\s+service)\s*\$\s*([0-9]+(?:\.[0-9]+)?)\s*\$\s*([0-9]+(?:\.[0-9]+)?)/gi;let m,i=0;
   while((m=re.exec(body))){i++;const jet=Number(m[2]),av=Number(m[1]);if(jet>0&&!rows.some(r=>r.jet_a===jet&&r.avgas_100ll===av))rows.push({name:'AirNav FBO '+i,jet_a:jet,avgas_100ll:av});}
   if(!rows.length){const pair=airnavFuelPair(body);if(pair)rows.push({name:req||'Airport FBO',...pair});}
