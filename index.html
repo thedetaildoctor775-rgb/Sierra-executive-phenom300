@@ -25,7 +25,7 @@
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html?v=20260823-dossier1" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20260823-ops1" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -56,6 +56,7 @@ careerFrame.addEventListener('load',()=>{
       .then(()=>loadScript('availabilityBannerFixScript','/availability-banner-fix.js?v=20260821-1'))
       .then(()=>loadScript('fboAutoPricingScript','/fbo-auto-pricing.js?v=20260823-fbo2'))
       .then(()=>loadScript('tripDossierScript','/trip-dossier.js?v=20260823-dossier1'))
+      .then(()=>loadScript('opsDashboardStyleScript','/ops-dashboard-style.js?v=20260823-ops1'))
       .then(()=>loadScript('westCoastMarketScript','/market-boost.js?v=20260823-west4'));
   }catch(err){
     console.error('Could not install Sierra Career OS fixes',err);
