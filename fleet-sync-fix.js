@@ -6,7 +6,8 @@ const DEFAULT_FLEET={
   N300SE:{tail:'N300SE',type:'Embraer Phenom 300E',model:'E55P',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Light-jet / short-medium executive charter'},
   N24NV:{tail:'N24NV',type:'Cessna Citation Longitude',model:'C700',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Super-midsize / long-range executive charter'},
   N88SX:{tail:'N88SX',type:'Cessna Citation X',model:'C750',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'High-speed / long-range executive charter'},
-  N72LX:{tail:'N72LX',type:'Cessna Citation Latitude',model:'C680A',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter'}
+  N72LX:{tail:'N72LX',type:'Cessna Citation Latitude',model:'C680A',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter'},
+  N800SX:{tail:'N800SX',type:'Hawker Beechcraft 800XP',model:'H25B',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter',callsign:'SIERRA EXECUTIVE',flightNumber:'SXR135'}
 };
 
 function ensureFleetFixed(){
@@ -271,5 +272,5 @@ setTimeout(repairNow,500);
 setTimeout(()=>{repairNow();try{sync();}catch(e){}},1800);
 setTimeout(repairNow,3500);
 
-console.info('Sierra Fleet Sync Fix v3 — KMEV canonical home base active');
+console.info('Sierra Fleet Sync Fix v4 — Hawker 800XP fleet entry active');
 })();
