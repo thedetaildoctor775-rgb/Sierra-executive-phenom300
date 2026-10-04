@@ -567,23 +567,100 @@ async function cloudSetNewPassword(){
 }
 function cloudPayload(){const fields={};IDS.forEach(id=>fields[id]=val(id));return {version:'Web v1',state,fields,updatedAt:new Date().toISOString()}}
 async function loadCloudCareer(){
- if(!sxSupabase||!sxCloudUser)return; updateCloudStatus('SYNCING…',false);sxCloudLoading=true;
- try{const {data,error}=await sxSupabase.from('career_snapshots').select('payload').eq('user_id',sxCloudUser.id).maybeSingle();if(error)throw error;
-  if(data?.payload){const p=data.payload;if(p.state)state=p.state;Object.entries(p.fields||{}).forEach(([k,v])=>set(k,v));localStorage.setItem('sierra_phenom300_state',JSON.stringify(state));IDS.forEach(id=>localStorage.setItem('p300_'+id,val(id)));sxCloudReady=true;normalizePhenomBaggage();reconcileFleet130();sync();renderMarket();await saveCloudCareer();updateCloudStatus('CLOUD SYNCED',true)}
-  else{sxCloudReady=true;await saveCloudCareer();updateCloudStatus('CLOUD CREATED',true)}
- }catch(e){console.error('Sierra cloud load failed:',e);updateCloudStatus('SYNC ERROR',false);authMsg('CLOUD LOAD ERROR: '+(e?.message||String(e)))}finally{sxCloudLoading=false}
+ if(!sxSupabase||!sxCloudUser)return;
+ updateCloudStatus('SYNCING…',false);
+ sxCloudLoading=true;
+ try{
+  let payload=null;
+  let tableUsable=true;
+
+  // Preferred storage: career_snapshots table.
+  const tableRead=await sxSupabase
+    .from('career_snapshots')
+    .select('payload')
+    .eq('user_id',sxCloudUser.id)
+    .maybeSingle();
+
+  if(tableRead.error){
+    tableUsable=false;
+    console.warn('career_snapshots unavailable; using auth metadata fallback:',tableRead.error);
+  }else{
+    payload=tableRead.data?.payload||null;
+  }
+
+  // Reliable fallback: Supabase Auth user metadata. This keeps Career OS
+  // syncing across devices even if the database table/RLS is missing.
+  if(!payload){
+    const userRead=await sxSupabase.auth.getUser();
+    if(!userRead.error){
+      sxCloudUser=userRead.data?.user||sxCloudUser;
+      payload=sxCloudUser?.user_metadata?.sierra_career_snapshot||null;
+    }
+  }
+
+  if(payload){
+    if(payload.state)state=payload.state;
+    Object.entries(payload.fields||{}).forEach(([k,v])=>set(k,v));
+    localStorage.setItem('sierra_phenom300_state',JSON.stringify(state));
+    IDS.forEach(id=>localStorage.setItem('p300_'+id,val(id)));
+    sxCloudReady=true;
+    normalizePhenomBaggage();
+    reconcileFleet130();
+    sync();
+    renderMarket();
+    await saveCloudCareer();
+    updateCloudStatus(tableUsable?'CLOUD SYNCED':'CLOUD SYNCED',true);
+  }else{
+    sxCloudReady=true;
+    await saveCloudCareer();
+    updateCloudStatus('CLOUD CREATED',true);
+  }
+ }catch(e){
+  console.error('Sierra cloud load failed:',e);
+  updateCloudStatus('SYNC ERROR',false);
+  authMsg('CLOUD LOAD ERROR: '+(e?.message||String(e)));
+ }finally{
+  sxCloudLoading=false;
+ }
 }
-function scheduleCloudSave(){if(!sxCloudReady||!sxCloudUser||sxCloudLoading)return;clearTimeout(sxCloudSaveTimer);sxCloudSaveTimer=setTimeout(saveCloudCareer,450)}
+
+function scheduleCloudSave(){
+ if(!sxCloudReady||!sxCloudUser||sxCloudLoading)return;
+ clearTimeout(sxCloudSaveTimer);
+ sxCloudSaveTimer=setTimeout(saveCloudCareer,450);
+}
+
 async function saveCloudCareer(){
  if(!sxSupabase||!sxCloudUser||sxCloudLoading)return false;
+ const payload=cloudPayload();
+
+ // Try the normal table first.
  try{
-  const snapshot={user_id:sxCloudUser.id,payload:cloudPayload(),updated_at:new Date().toISOString()};
-  const {error}=await sxSupabase.from('career_snapshots').upsert(snapshot,{onConflict:'user_id'});
+  const snapshot={user_id:sxCloudUser.id,payload,updated_at:new Date().toISOString()};
+  const {error}=await sxSupabase
+    .from('career_snapshots')
+    .upsert(snapshot,{onConflict:'user_id'});
+  if(!error){
+    updateCloudStatus('CLOUD SYNCED',true);
+    return true;
+  }
+  console.warn('career_snapshots save unavailable; falling back to auth metadata:',error);
+ }catch(e){
+  console.warn('career_snapshots save failed; falling back to auth metadata:',e);
+ }
+
+ // Fallback that does not require a custom table or RLS policy.
+ try{
+  const existing={...(sxCloudUser?.user_metadata||{})};
+  const {data,error}=await sxSupabase.auth.updateUser({
+    data:{...existing,sierra_career_snapshot:payload}
+  });
   if(error)throw error;
+  sxCloudUser=data?.user||sxCloudUser;
   updateCloudStatus('CLOUD SYNCED',true);
   return true;
  }catch(e){
-  console.error('Sierra cloud save failed:',e);
+  console.error('Sierra cloud metadata save failed:',e);
   updateCloudStatus('SYNC ERROR',false);
   return false;
  }
