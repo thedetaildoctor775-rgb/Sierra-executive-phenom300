@@ -485,7 +485,40 @@ async function cloudSignIn(){
  if(!email||!password){authMsg('Enter email and password.');return}
  authMsg('Signing in…');
  try{
-  const {data,error}=await sxSupabase.auth.signInWithPassword({email,password});
+  let {data,error}=await sxSupabase.auth.signInWithPassword({email,password});
+
+  // First-time setup recovery: if this Supabase project has no matching user yet,
+  // create the account with the credentials the user just entered.
+  if(error && /invalid login credentials/i.test(error.message||'')){
+   authMsg('Setting up your Sierra Executive cloud account…');
+   const signup=await sxSupabase.auth.signUp({email,password});
+   if(!signup.error){
+    data=signup.data;
+    error=null;
+    sxCloudUser=data?.user||data?.session?.user||null;
+    if(data?.session && sxCloudUser){
+      authMsg('Cloud account created. Loading your career…');
+      await loadCloudCareer();
+      closeAuth();
+      return;
+    }
+    authMsg('Cloud account created. Check your email for the confirmation link, then sign in.');
+    return;
+   }
+
+   // If the account already exists but the password is wrong, send a reset link
+   // instead of leaving the user at a dead-end error.
+   if(/already registered|already exists|user.*exists/i.test(signup.error.message||'')){
+    const redirectTo=window.location.origin+window.location.pathname;
+    const reset=await sxSupabase.auth.resetPasswordForEmail(email,{redirectTo});
+    authMsg(reset.error
+      ? 'SIGN-IN ERROR: '+reset.error.message
+      : 'That account already exists, but the password did not match. I sent a password-reset link to '+email+'.');
+    return;
+   }
+   error=signup.error;
+  }
+
   if(error){authMsg('SIGN-IN ERROR: '+error.message);return}
   sxCloudUser=data?.user||data?.session?.user||null;
   authMsg('Signed in. Loading cloud career…');
