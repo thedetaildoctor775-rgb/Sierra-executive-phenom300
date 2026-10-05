@@ -16,8 +16,18 @@ function ensureGroundOps(fid){
   s.groundOps=s.groundOps||{};
   s.groundOps[fid]=s.groundOps[fid]||{departure:{},arrival:{},updatedAt:null};
   const g=s.groundOps[fid];
-  g.departure={fuel:'REQUESTED',gpu:'NOT REQUESTED',catering:'REQUESTED',boarding:'NOT REQUESTED',...(g.departure||{})};
-  g.arrival={transport:'REQUESTED',crewcar:'NOT REQUESTED',fuel:'NOT REQUESTED',lav:'NOT REQUESTED',hangar:'NOT REQUESTED',...(g.arrival||{})};
+  g.departure={...(g.departure||{})};
+  g.arrival={...(g.arrival||{})};
+  // On charter acceptance, initialize the normal operational requests.
+  g.departure.fuel='REQUESTED';
+  g.departure.catering='REQUESTED';
+  if(!g.departure.gpu)g.departure.gpu='NOT REQUESTED';
+  if(!g.departure.boarding)g.departure.boarding='NOT REQUESTED';
+  g.arrival.transport='REQUESTED';
+  if(!g.arrival.crewcar)g.arrival.crewcar='NOT REQUESTED';
+  if(!g.arrival.fuel)g.arrival.fuel='NOT REQUESTED';
+  if(!g.arrival.lav)g.arrival.lav='NOT REQUESTED';
+  if(!g.arrival.hangar)g.arrival.hangar='NOT REQUESTED';
   g.updatedAt=now();
   return g;
 }
