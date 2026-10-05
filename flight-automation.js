@@ -189,5 +189,24 @@ if(typeof oldClose==='function'){
   };
 }
 
+// Repair/initialize any charter that was already active before this script version loaded.
+function repairActivePackage(){
+  const s=getState(),a=s?.activeAssignment;
+  if(!s||!a)return;
+  const fid=String(a.flight||read('flightId')||'').toUpperCase();
+  if(!fid)return;
+  buildPackage();
+  const g=ensureGroundOps(fid);
+  // Make sure the current active charter reflects the normal initial requests too.
+  g.departure.fuel='REQUESTED';
+  g.departure.catering='REQUESTED';
+  g.arrival.transport='REQUESTED';
+  g.updatedAt=now();
+  persist();
+}
+repairActivePackage();
+setTimeout(repairActivePackage,600);
+setTimeout(repairActivePackage,1800);
+
 console.info('Sierra Executive automatic flight-package workflow active');
 })();
