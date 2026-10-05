@@ -3,15 +3,16 @@
 
 const HOME_BASE='KMEV';
 const DEFAULT_FLEET={
-  N300SE:{tail:'N300SE',type:'Embraer Phenom 300E',model:'E55P',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Light-jet / short-medium executive charter'},
-  N24NV:{tail:'N24NV',type:'Cessna Citation Longitude',model:'C700',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Super-midsize / long-range executive charter'},
   N88SX:{tail:'N88SX',type:'Cessna Citation X',model:'C750',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'High-speed / long-range executive charter'},
-  N72LX:{tail:'N72LX',type:'Cessna Citation Latitude',model:'C680A',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter'},
   N800SX:{tail:'N800SX',type:'Hawker Beechcraft 800XP',model:'H25B',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter',callsign:'SIERRA EXECUTIVE',flightNumber:'SXR135'}
 };
+const ALLOWED_FLEET=new Set(Object.keys(DEFAULT_FLEET));
 
 function ensureFleetFixed(){
   state.fleet=state.fleet||{};
+  for(const tail of Object.keys(state.fleet)){
+    if(!ALLOWED_FLEET.has(tail)) delete state.fleet[tail];
+  }
   for(const [tail,defaults] of Object.entries(DEFAULT_FLEET)){
     const old=state.fleet[tail]||{};
     state.fleet[tail]={
@@ -29,7 +30,7 @@ function ensureFleetFixed(){
   }
   state.homeBase=HOME_BASE;
   state.operatorHomeBase=HOME_BASE;
-  if(!state.selectedAircraft||!state.fleet[state.selectedAircraft]) state.selectedAircraft='N300SE';
+  if(!state.selectedAircraft||!state.fleet[state.selectedAircraft]) state.selectedAircraft='N88SX';
   if(state.activeAircraft&&!state.fleet[state.activeAircraft]) state.activeAircraft=state.selectedAircraft;
   return state.fleet;
 }
@@ -53,12 +54,12 @@ function activeTail(){
   if(state.selectedAircraft&&state.fleet[state.selectedAircraft]) return state.selectedAircraft;
   const assignmentTail=state.activeAssignment?.aircraft;
   if(assignmentTail&&state.fleet[assignmentTail]) return assignmentTail;
-  return 'N300SE';
+  return 'N88SX';
 }
 
 function selectedAircraftFixed(){
   ensureFleetFixed();
-  return state.fleet[activeTail()]||state.fleet.N300SE;
+  return state.fleet[activeTail()]||state.fleet.N88SX;
 }
 
 function enforceLocationFromWorkflow(tail){
@@ -272,5 +273,5 @@ setTimeout(repairNow,500);
 setTimeout(()=>{repairNow();try{sync();}catch(e){}},1800);
 setTimeout(repairNow,3500);
 
-console.info('Sierra Fleet Sync Fix v4 — Hawker 800XP fleet entry active');
+console.info('Sierra Fleet Sync Fix v5 — Citation X + Hawker only');
 })();
