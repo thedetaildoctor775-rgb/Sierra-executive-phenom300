@@ -73,8 +73,8 @@ function dispatchHTML(){
    <div class="sx-ws-row"><span>Client</span><b>${esc(client())}</b></div>
    <div class="sx-ws-row"><span>Representative</span><b>${esc(clientContact())}</b></div>
    <div class="sx-ws-row"><span>Mission</span><b>${esc(a?.mission||val('mission')||'—')}</b></div>
-   <div class="sx-ws-row"><span>Passengers</span><b>${esc(a?.pax??val('paxCount')||'—')}</b></div>
-   <div class="sx-ws-row"><span>Baggage</span><b>${esc(a?.bags??val('bags')||'—')} lb</b></div>
+   <div class="sx-ws-row"><span>Passengers</span><b>${esc((a?.pax ?? val('paxCount')) || '—')}</b></div>
+   <div class="sx-ws-row"><span>Baggage</span><b>${esc((a?.bags ?? val('bags')) || '—')} lb</b></div>
   </div>
  </div>
  <div class="sx-ws-card" style="margin-top:9px"><h3>Mission Brief</h3><div class="sx-ws-pre">${esc(val('missionBrief')||'No mission brief saved.')}</div></div>
