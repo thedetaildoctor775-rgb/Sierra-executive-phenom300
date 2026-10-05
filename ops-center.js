@@ -236,19 +236,34 @@ function polishHeader(){
   const badge=document.querySelector('.topbar .badge.green');
   if(badge)badge.textContent='SIERRA EXECUTIVE • OPS V2';
 }
+let sxUserNavigated=false;
 function bindModeReset(){
   document.querySelectorAll('nav.tabs .tab').forEach(b=>{
     if(b.dataset.tab==='opsCenter'||b.dataset.sxOpsBound)return;
     b.dataset.sxOpsBound='1';
-    b.addEventListener('click',()=>document.body.classList.remove('sx-ops-mode'));
+    b.addEventListener('click',(e)=>{
+      if(!e.isTrusted)return;
+      sxUserNavigated=true;
+      document.body.classList.remove('sx-ops-mode');
+    });
   });
+  const opsBtn=document.querySelector('nav.tabs .tab[data-tab="opsCenter"]');
+  if(opsBtn&&!opsBtn.dataset.sxOpsBound){
+    opsBtn.dataset.sxOpsBound='1';
+    opsBtn.addEventListener('click',(e)=>{
+      if(e.isTrusted)sxUserNavigated=false;
+    });
+  }
 }
 function firstRun(){
   installStyles();installTab();installPanel();bindModeReset();polishHeader();render();
-  show();
+  if(!sxUserNavigated)show();
 }
 firstRun();
-setTimeout(firstRun,500);
-setInterval(()=>{if($('opsCenter')?.classList.contains('active'))render()},2500);
+[250,700,1400,2600,4200].forEach(ms=>setTimeout(()=>{if(!sxUserNavigated)firstRun()},ms));
+setInterval(()=>{
+  if(!sxUserNavigated && !$('opsCenter')?.classList.contains('active'))show();
+  if($('opsCenter')?.classList.contains('active'))render();
+},2500);
 console.info('Sierra Executive Operations Center v2 active');
 })();
