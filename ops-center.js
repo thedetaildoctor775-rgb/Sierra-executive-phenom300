@@ -77,6 +77,9 @@ function installStyles(){
   if($('sxOpsCenterStyles'))return;
   const s=document.createElement('style');s.id='sxOpsCenterStyles';
   s.textContent=`
+  body.sx-ops-mode main.content > .grid2,
+  body.sx-ops-mode main.content > section.card:not(.panel){display:none!important}
+  body.sx-ops-mode #opsCenter{display:block!important;margin-top:0!important}
   #opsCenter{padding:0!important;border:0!important;background:transparent!important}
   .sx-ops-hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:10px;margin-bottom:10px}
   .sx-ops-card{background:#10141a;border:1px solid #35414b;border-radius:8px;overflow:hidden}
@@ -221,6 +224,7 @@ function render(){
   $('sxOpenPhone')?.addEventListener('click',()=>window.sxDispatchPhone?.open?.());
 }
 function show(){
+  document.body.classList.add('sx-ops-mode');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('nav.tabs .tab').forEach(b=>b.classList.remove('active'));
   $('opsCenter')?.classList.add('active');
@@ -232,8 +236,15 @@ function polishHeader(){
   const badge=document.querySelector('.topbar .badge.green');
   if(badge)badge.textContent='SIERRA EXECUTIVE • OPS V2';
 }
+function bindModeReset(){
+  document.querySelectorAll('nav.tabs .tab').forEach(b=>{
+    if(b.dataset.tab==='opsCenter'||b.dataset.sxOpsBound)return;
+    b.dataset.sxOpsBound='1';
+    b.addEventListener('click',()=>document.body.classList.remove('sx-ops-mode'));
+  });
+}
 function firstRun(){
-  installStyles();installTab();installPanel();polishHeader();render();
+  installStyles();installTab();installPanel();bindModeReset();polishHeader();render();
   show();
 }
 firstRun();
