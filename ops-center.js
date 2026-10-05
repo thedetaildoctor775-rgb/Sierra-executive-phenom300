@@ -186,14 +186,14 @@ function render(){
   const clientContact=a?.clientContact||$('clientContact')?.value||'Client representative';
   el.innerHTML=`
   <div class="sx-opnav">
-    <button data-open="dispatch">Dispatch</button>
-    <button data-open="dispatch">OFP</button>
-    <button data-open="dispatch">Weather</button>
-    <button data-open="dispatch">Airports</button>
-    <button class="active">Ground Ops</button>
-    <button data-open="log">Flight Tracker</button>
-    <button id="sxOpenPhoneTop">ACARS / Comms</button>
-    <button data-open="finance">Financials</button>
+    <button data-workspace="dispatch">Dispatch</button>
+    <button data-workspace="ofp">OFP</button>
+    <button data-workspace="weather">Weather</button>
+    <button data-workspace="airports">Airports</button>
+    <button class="active" data-workspace="ground">Ground Ops</button>
+    <button data-workspace="tracker">Flight Tracker</button>
+    <button data-workspace="comms">ACARS / Comms</button>
+    <button data-workspace="financials">Financials</button>
   </div>
   <div class="sx-contact-grid">
     <div class="sx-contact-card"><small>Dispatcher</small><b>${esc(dispatcher)}</b><span>Flight watch • release • passenger coordination</span></div>
@@ -278,6 +278,7 @@ function render(){
   el.querySelectorAll('.sx-svc').forEach(b=>b.onclick=()=>cycleService(b.dataset.side,b.dataset.key));
   el.querySelectorAll('[data-wf]').forEach(b=>b.onclick=()=>setWorkflow(b.dataset.wf));
   el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openTab(b.dataset.open));
+  if(window.sxOpsWorkspaces?.bind)window.sxOpsWorkspaces.bind(el);
   $('sxCloseFlight')?.addEventListener('click',closeActive);
   $('sxOpenPhone')?.addEventListener('click',()=>window.sxDispatchPhone?.open?.());
   $('sxOpenPhoneTop')?.addEventListener('click',()=>window.sxDispatchPhone?.open?.());
