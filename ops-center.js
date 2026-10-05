@@ -1,0 +1,243 @@
+(()=>{
+'use strict';
+if(window.__sxOpsCenterV2)return;
+window.__sxOpsCenterV2=true;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'$'+Math.round(Number(n)||0).toLocaleString();
+const STATUSES=['NOT REQUESTED','REQUESTED','CONFIRMED','COMPLETE'];
+
+function getState(){try{return (typeof state!=='undefined'&&state)?state:JSON.parse(localStorage.getItem('sierra_phenom300_state')||'{}')}catch(e){return {}}}
+function save(){
+  try{
+    if(typeof saveState==='function')saveState();
+    else localStorage.setItem('sierra_phenom300_state',JSON.stringify(getState()));
+  }catch(e){
+    try{localStorage.setItem('sierra_phenom300_state',JSON.stringify(getState()))}catch(_){}
+  }
+}
+function active(){
+  const s=getState();
+  return s.activeAssignment||s.activeFlight||s.currentFlight||null;
+}
+function workflow(){
+  const s=getState(),a=active();
+  return String(s.workflow||a?.status||'scheduled').toLowerCase();
+}
+function aircraftText(){
+  const s=getState(),a=active();
+  return a?.aircraft||s.activeAircraft||s.selectedAircraft||$('sideAircraft')?.textContent||'Aircraft not selected';
+}
+function routeText(){
+  const a=active();
+  if(!a)return 'NO ACTIVE CHARTER';
+  return [a.origin||$('origin')?.value,a.destination||a.dest||$('destination')?.value].filter(Boolean).join(' → ').toUpperCase()||'ACTIVE CHARTER';
+}
+function flightId(){
+  const a=active();
+  return String(a?.flight||a?.id||a?.callsign||$('flightId')?.value||'STANDBY').toUpperCase();
+}
+function ensureGroundOps(){
+  const s=getState();
+  s.groundOps=s.groundOps||{};
+  const key=flightId();
+  s.groundOps[key]=s.groundOps[key]||{departure:{},arrival:{},updatedAt:null};
+  return s.groundOps[key];
+}
+function cycleService(side,key){
+  const g=ensureGroundOps();
+  const cur=String(g[side]?.[key]||'NOT REQUESTED').toUpperCase();
+  const i=STATUSES.indexOf(cur);
+  g[side][key]=STATUSES[(i+1)%STATUSES.length];
+  g.updatedAt=new Date().toISOString();
+  save(); render();
+}
+function statusClass(v){
+  v=String(v||'').toUpperCase();
+  if(v==='COMPLETE')return 'done';
+  if(v==='CONFIRMED')return 'confirmed';
+  if(v==='REQUESTED')return 'requested';
+  return '';
+}
+function setWorkflow(next){
+  try{
+    if(typeof step==='function'){step(next);setTimeout(render,120);return;}
+    const s=getState();s.workflow=next;save();render();
+  }catch(e){console.error(e)}
+}
+function openTab(name){
+  const b=document.querySelector('nav.tabs .tab[data-tab="'+name+'"]');
+  if(b)b.click();
+}
+function closeActive(){
+  if(typeof closeFlight==='function')return closeFlight();
+}
+function installStyles(){
+  if($('sxOpsCenterStyles'))return;
+  const s=document.createElement('style');s.id='sxOpsCenterStyles';
+  s.textContent=`
+  #opsCenter{padding:0!important;border:0!important;background:transparent!important}
+  .sx-ops-hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:10px;margin-bottom:10px}
+  .sx-ops-card{background:#10141a;border:1px solid #35414b;border-radius:8px;overflow:hidden}
+  .sx-ops-main{padding:17px;background:radial-gradient(circle at 85% 12%,rgba(47,227,242,.10),transparent 30%),linear-gradient(140deg,#121820,#0d1116)}
+  .sx-ops-eyebrow{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#e9bf62;font-weight:800}
+  .sx-ops-flightline{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-top:5px}
+  .sx-ops-flight{font-size:22px;font-weight:900;color:#fff}
+  .sx-ops-route{font-size:38px;font-weight:950;letter-spacing:.01em;color:#63ddeb;line-height:1.06;margin:7px 0}
+  .sx-ops-client{font-size:13px;color:#b6c6cc}
+  .sx-ops-state{font-size:10px;border:1px solid #53616b;padding:6px 8px;border-radius:999px;color:#e9bf62;white-space:nowrap}
+  .sx-ops-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px}
+  .sx-kpi{background:#151c23;border:1px solid #283743;border-radius:6px;padding:9px}.sx-kpi span{display:block;color:#8eb4bf;font-size:8px;letter-spacing:.1em;text-transform:uppercase}.sx-kpi b{display:block;font-size:15px;margin-top:3px}
+  .sx-career{padding:14px}.sx-career h3,.sx-services h3,.sx-quick h3{margin:0 0 10px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#9eb2b4}
+  .sx-career-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #252d34;font-size:12px}.sx-career-row:last-child{border-bottom:0}.sx-career-row span{color:#8eb4bf}.sx-career-row b{font-size:13px}
+  .sx-progress{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin:10px 0}
+  .sx-progress-step{padding:8px 5px;border:1px solid #323d46;background:#11161c;text-align:center;font-size:9px;font-weight:800;color:#667781;border-radius:5px}
+  .sx-progress-step.live{color:#e9bf62;border-color:#806d34;background:#1b180f}.sx-progress-step.past{color:#62e887;border-color:#315e42;background:#0e1913}
+  .sx-section-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sx-services,.sx-quick{padding:14px}
+  .sx-service-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  .sx-svc{border:1px solid #35414b;background:#151b21;color:#fff;border-radius:7px;padding:9px 10px;text-align:left;cursor:pointer}
+  .sx-svc small{display:block;color:#7f949f;font-size:8px;text-transform:uppercase;letter-spacing:.1em}.sx-svc strong{display:block;font-size:12px;margin-top:3px}
+  .sx-svc.requested{border-color:#7b6324;background:#211b0d}.sx-svc.requested strong{color:#ffd166}
+  .sx-svc.confirmed{border-color:#216a76;background:#0d2024}.sx-svc.confirmed strong{color:#63ddeb}
+  .sx-svc.done{border-color:#315e42;background:#0f1b14}.sx-svc.done strong{color:#62e887}
+  .sx-action-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  .sx-action{border:1px solid #44515c;background:#171b20;color:#f5f7f8;border-radius:7px;padding:10px;font-weight:800;font-size:11px;cursor:pointer}.sx-action.primary{border-color:#806d34;background:#1d190f;color:#f0cb75}.sx-action.good{border-color:#315e42;background:#0f1b14;color:#62e887}
+  .sx-toolbar2{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.sx-link{border:1px solid #35414b;background:#10151a;color:#a9bbc3;border-radius:6px;padding:8px 10px;font-size:10px;font-weight:800;cursor:pointer}
+  .sx-muted{color:#748892;font-size:10px;margin-top:8px}
+  @media(max-width:950px){.sx-ops-hero,.sx-section-grid{grid-template-columns:1fr}.sx-ops-grid{grid-template-columns:repeat(2,1fr)}.sx-progress{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:700px){.sx-ops-route{font-size:29px}.sx-service-grid,.sx-action-grid{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(s);
+}
+function installTab(){
+  const nav=document.querySelector('nav.tabs'); if(!nav)return;
+  if(!nav.querySelector('[data-tab="opsCenter"]')){
+    const b=document.createElement('button');b.className='tab';b.dataset.tab='opsCenter';b.textContent='Operations';
+    nav.prepend(b);
+    b.addEventListener('click',show);
+  }
+}
+function installPanel(){
+  if($('opsCenter'))return;
+  const main=document.querySelector('main.content');if(!main)return;
+  const sec=document.createElement('section');sec.id='opsCenter';sec.className='panel';main.prepend(sec);
+}
+function progressHTML(){
+  const w=workflow();
+  const stages=['accepted','duty','boarded','departed','landed','parked'];
+  const labels=['Accepted','On Duty','Boarded','Enroute','Landed','Parked'];
+  let ix=stages.indexOf(w);
+  if(w==='fuel'||w==='ready')ix=stages.indexOf('duty');
+  if(w==='scheduled')ix=-1;
+  if(['closed','complete','completed'].includes(w))ix=stages.length;
+  return labels.map((x,i)=>'<div class="sx-progress-step '+(i<ix?'past':i===ix?'live':'')+'">'+x+'</div>').join('');
+}
+function serviceButton(side,key,label){
+  const g=ensureGroundOps();
+  const v=String(g[side]?.[key]||'NOT REQUESTED').toUpperCase();
+  return '<button class="sx-svc '+statusClass(v)+'" data-side="'+side+'" data-key="'+key+'"><small>'+esc(label)+'</small><strong>'+esc(v)+'</strong></button>';
+}
+function render(){
+  installStyles();installTab();installPanel();
+  const el=$('opsCenter');if(!el)return;
+  const s=getState(),a=active(),c=s.career||{};
+  const pax=Number(a?.pax??$('paxCount')?.value??0),bags=Number(a?.bags??$('bags')?.value??0),rev=Number(a?.revenue??$('revenue')?.value??0);
+  const client=a?.client||$('clientName')?.value||'No active client';
+  const dep=a?.origin||$('origin')?.value||'—',arr=a?.destination||a?.dest||$('destination')?.value||'—';
+  el.innerHTML=`
+  <div class="sx-ops-hero">
+    <div class="sx-ops-card sx-ops-main">
+      <div class="sx-ops-eyebrow">Sierra Executive • Live Operations</div>
+      <div class="sx-ops-flightline"><div class="sx-ops-flight">${esc(flightId())}</div><div class="sx-ops-state">${esc(workflow().replace(/_/g,' ').toUpperCase())}</div></div>
+      <div class="sx-ops-route">${esc(routeText())}</div>
+      <div class="sx-ops-client">${esc(client)} • ${esc(aircraftText())}</div>
+      <div class="sx-progress">${progressHTML()}</div>
+      <div class="sx-ops-grid">
+        <div class="sx-kpi"><span>Passengers</span><b>${pax||'—'}</b></div>
+        <div class="sx-kpi"><span>Baggage</span><b>${bags?Math.round(bags)+' lb':'—'}</b></div>
+        <div class="sx-kpi"><span>Charter Value</span><b>${rev?money(rev):'—'}</b></div>
+        <div class="sx-kpi"><span>Destination</span><b>${esc(arr)}</b></div>
+      </div>
+    </div>
+    <div class="sx-ops-card sx-career">
+      <h3>Company Snapshot</h3>
+      <div class="sx-career-row"><span>Fleet aircraft</span><b>${Array.isArray(s.fleet)?s.fleet.length:'—'}</b></div>
+      <div class="sx-career-row"><span>Career charters</span><b>${Number(c.charters)||0}</b></div>
+      <div class="sx-career-row"><span>Passengers carried</span><b>${Number(c.pax)||0}</b></div>
+      <div class="sx-career-row"><span>Flight hours</span><b>${Number(c.hours||0).toFixed(1)}</b></div>
+      <div class="sx-career-row"><span>Career profit</span><b style="color:#62e887">${money(c.profit||0)}</b></div>
+      <div class="sx-career-row"><span>Current base/location</span><b>${esc(c.location||dep||'—')}</b></div>
+    </div>
+  </div>
+
+  <div class="sx-section-grid">
+    <div class="sx-ops-card sx-services">
+      <h3>Departure Services • ${esc(dep)}</h3>
+      <div class="sx-service-grid">
+        ${serviceButton('departure','fuel','Fuel')}
+        ${serviceButton('departure','gpu','GPU')}
+        ${serviceButton('departure','catering','Catering')}
+        ${serviceButton('departure','boarding','Boarding')}
+      </div>
+      <div class="sx-muted">Tap a service to move it through Not Requested → Requested → Confirmed → Complete.</div>
+    </div>
+    <div class="sx-ops-card sx-services">
+      <h3>Arrival Services • ${esc(arr)}</h3>
+      <div class="sx-service-grid">
+        ${serviceButton('arrival','transport','PAX Transport')}
+        ${serviceButton('arrival','crewcar','Crew Car')}
+        ${serviceButton('arrival','fuel','Fuel')}
+        ${serviceButton('arrival','lav','Lav Service')}
+        ${serviceButton('arrival','hangar','Hangar / Parking')}
+      </div>
+    </div>
+  </div>
+
+  <div class="sx-ops-card sx-quick" style="margin-top:10px">
+    <h3>Flight Actions</h3>
+    <div class="sx-action-grid">
+      <button class="sx-action primary" data-wf="duty">Start Duty</button>
+      <button class="sx-action primary" data-wf="boarded">Passengers Boarded</button>
+      <button class="sx-action good" data-wf="departed">Departed</button>
+      <button class="sx-action good" data-wf="landed">Landed</button>
+      <button class="sx-action" data-wf="parked">Parked</button>
+      <button class="sx-action" id="sxCloseFlight">Close Flight</button>
+    </div>
+    <div class="sx-toolbar2">
+      <button class="sx-link" data-open="dispatch">Dispatch</button>
+      <button class="sx-link" data-open="manifest">Manifest</button>
+      <button class="sx-link" data-open="fuel">Fuel & Load</button>
+      <button class="sx-link" data-open="fbo">Full FBO Page</button>
+      <button class="sx-link" data-open="finance">Financials</button>
+      <button class="sx-link" id="sxOpenPhone">Dispatch Phone</button>
+    </div>
+  </div>`;
+  el.querySelectorAll('.sx-svc').forEach(b=>b.onclick=()=>cycleService(b.dataset.side,b.dataset.key));
+  el.querySelectorAll('[data-wf]').forEach(b=>b.onclick=()=>setWorkflow(b.dataset.wf));
+  el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openTab(b.dataset.open));
+  $('sxCloseFlight')?.addEventListener('click',closeActive);
+  $('sxOpenPhone')?.addEventListener('click',()=>window.sxDispatchPhone?.open?.());
+}
+function show(){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav.tabs .tab').forEach(b=>b.classList.remove('active'));
+  $('opsCenter')?.classList.add('active');
+  document.querySelector('[data-tab="opsCenter"]')?.classList.add('active');
+  if($('pageTitle'))$('pageTitle').textContent='Operations Center';
+  render();
+}
+function firstRun(){
+  installStyles();installTab();installPanel();render();
+  const seen=sessionStorage.getItem('sx_ops_center_seen');
+  if(!seen){
+    sessionStorage.setItem('sx_ops_center_seen','1');
+    show();
+  }
+}
+firstRun();
+setTimeout(firstRun,500);
+setInterval(()=>{if($('opsCenter')?.classList.contains('active'))render()},2500);
+console.info('Sierra Executive Operations Center v2 active');
+})();
