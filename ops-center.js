@@ -166,7 +166,7 @@ function render(){
     </div>
     <div class="sx-ops-card sx-career">
       <h3>Company Snapshot</h3>
-      <div class="sx-career-row"><span>Fleet aircraft</span><b>${Array.isArray(s.fleet)?s.fleet.length:'—'}</b></div>
+      <div class="sx-career-row"><span>Fleet aircraft</span><b>${s.fleet&&typeof s.fleet==='object'?Object.keys(s.fleet).length:'—'}</b></div>
       <div class="sx-career-row"><span>Career charters</span><b>${Number(c.charters)||0}</b></div>
       <div class="sx-career-row"><span>Passengers carried</span><b>${Number(c.pax)||0}</b></div>
       <div class="sx-career-row"><span>Flight hours</span><b>${Number(c.hours||0).toFixed(1)}</b></div>
