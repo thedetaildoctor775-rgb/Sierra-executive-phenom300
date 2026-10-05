@@ -228,13 +228,13 @@ function show(){
   if($('pageTitle'))$('pageTitle').textContent='Operations Center';
   render();
 }
+function polishHeader(){
+  const badge=document.querySelector('.topbar .badge.green');
+  if(badge)badge.textContent='SIERRA EXECUTIVE • OPS V2';
+}
 function firstRun(){
-  installStyles();installTab();installPanel();render();
-  const seen=sessionStorage.getItem('sx_ops_center_seen');
-  if(!seen){
-    sessionStorage.setItem('sx_ops_center_seen','1');
-    show();
-  }
+  installStyles();installTab();installPanel();polishHeader();render();
+  show();
 }
 firstRun();
 setTimeout(firstRun,500);
