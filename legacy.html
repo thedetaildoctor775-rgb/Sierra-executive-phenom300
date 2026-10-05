@@ -565,7 +565,16 @@ async function cloudSetNewPassword(){
  if(error)alert(error.message);
  else alert('Password updated successfully.');
 }
-function cloudPayload(){const fields={};IDS.forEach(id=>fields[id]=val(id));return {version:'Web v1',state,fields,updatedAt:new Date().toISOString()}}
+function cloudPayload(){
+ const fields={};IDS.forEach(id=>fields[id]=val(id));
+ const cloudState={...state};
+ // The charter market is regenerated and can grow large enough to break Auth metadata sync.
+ // Keep durable career/flight data in cloud, but do not sync the transient market board.
+ delete cloudState.marketBoard;
+ delete cloudState.marketSeeded;
+ delete cloudState.marketRevision;
+ return {version:'Web v2',state:cloudState,fields,updatedAt:new Date().toISOString()};
+}
 async function loadCloudCareer(){
  if(!sxSupabase||!sxCloudUser)return;
  updateCloudStatus('SYNCING…',false);
@@ -599,7 +608,7 @@ async function loadCloudCareer(){
   }
 
   if(payload){
-    if(payload.state)state=payload.state;
+    if(payload.state)state={...state,...payload.state};
     Object.entries(payload.fields||{}).forEach(([k,v])=>set(k,v));
     localStorage.setItem('sierra_phenom300_state',JSON.stringify(state));
     IDS.forEach(id=>localStorage.setItem('p300_'+id,val(id)));
@@ -617,8 +626,8 @@ async function loadCloudCareer(){
   }
  }catch(e){
   console.error('Sierra cloud load failed:',e);
-  updateCloudStatus('SYNC ERROR',false);
-  authMsg('CLOUD LOAD ERROR: '+(e?.message||String(e)));
+  updateCloudStatus('LOCAL SAVED',false);
+  authMsg('Cloud sync is unavailable right now. Your local Sierra data is still saved on this device.');
  }finally{
   sxCloudLoading=false;
  }
@@ -661,7 +670,7 @@ async function saveCloudCareer(){
   return true;
  }catch(e){
   console.error('Sierra cloud metadata save failed:',e);
-  updateCloudStatus('SYNC ERROR',false);
+  updateCloudStatus('LOCAL SAVED',false);
   return false;
  }
 }
