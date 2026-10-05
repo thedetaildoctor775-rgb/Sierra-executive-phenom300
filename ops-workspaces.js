@@ -217,8 +217,7 @@ function bind(host){
 }
 window.sxOpsWorkspaces={bind,render,open:(name)=>{current=name||'ground';render()}};
 installStyles();
-const mo=new MutationObserver(()=>{const h=$('opsCenter');if(h&&h.querySelector('.sx-opnav'))bind(h)});
-mo.observe(document.documentElement,{childList:true,subtree:true});
-setTimeout(()=>{const h=$('opsCenter');if(h)bind(h)},800);
-console.info('Sierra Executive dedicated operations workspaces active');
+setTimeout(()=>{const h=$('opsCenter');if(h&&h.querySelector('.sx-opnav'))bind(h)},300);
+setTimeout(()=>{const h=$('opsCenter');if(h&&h.querySelector('.sx-opnav'))bind(h)},1200);
+console.info('Sierra Executive dedicated operations workspaces v2 active');
 })();
