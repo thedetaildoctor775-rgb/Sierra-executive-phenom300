@@ -1,15 +1,12 @@
 (()=>{
 const STATE_KEY='sierra_phenom300_state';
 const DEFAULTS={
-  N300SE:{tail:'N300SE',type:'Embraer Phenom 300E',model:'E55P',home:'KRNO',location:'KRNO',status:'Available'},
-  N24NV:{tail:'N24NV',type:'Cessna Citation Longitude',model:'C700',home:'KRNO',location:'KRNO',status:'Available'},
-  N88SX:{tail:'N88SX',type:'Cessna Citation X',model:'C750',home:'KRNO',location:'KRNO',status:'Available'},
-  N72LX:{tail:'N72LX',type:'Cessna Citation Latitude',model:'C680A',home:'KRNO',location:'KRNO',status:'Available'},
-  N800SX:{tail:'N800SX',type:'Hawker Beechcraft 800XP',model:'H25B',home:'KRNO',location:'KRNO',status:'Available',callsign:'SIERRA EXECUTIVE',flightNumber:'SXR135'}
+  N88SX:{tail:'N88SX',type:'Cessna Citation X',model:'C750',home:'KMEV',location:'KMEV',status:'Available'},
+  N800SX:{tail:'N800SX',type:'Hawker Beechcraft 800XP',model:'H25B',home:'KMEV',location:'KMEV',status:'Available',callsign:'SIERRA EXECUTIVE',flightNumber:'SXR135'}
 };
 const load=()=>{try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')||{}}catch{return {}}};
 const save=s=>localStorage.setItem(STATE_KEY,JSON.stringify(s));
-function ensureFleet(s){s.fleet=s.fleet||{};Object.entries(DEFAULTS).forEach(([k,v])=>s.fleet[k]={...v,...(s.fleet[k]||{})});if(!s.selectedAircraft||!s.fleet[s.selectedAircraft])s.selectedAircraft='N300SE';save(s);return s}
+function ensureFleet(s){s.fleet=s.fleet||{};Object.keys(s.fleet).forEach(k=>{if(!DEFAULTS[k])delete s.fleet[k]});Object.entries(DEFAULTS).forEach(([k,v])=>s.fleet[k]={...v,...(s.fleet[k]||{})});if(!s.selectedAircraft||!s.fleet[s.selectedAircraft])s.selectedAircraft='N88SX';save(s);return s}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function isBusy(s){return ['accepted','duty','fuel','boarded','ready','departed','landed','parked'].includes(String(s.workflow||'').toLowerCase())}
 function selectAircraft(tail){const s=ensureFleet(load());if(isBusy(s)&&s.activeAircraft&&s.activeAircraft!==tail){alert('Finish or reset the active flight before switching aircraft.');return;}s.selectedAircraft=tail;if(!isBusy(s))s.activeAircraft=tail;save(s);render();window.dispatchEvent(new StorageEvent('storage',{key:STATE_KEY,newValue:JSON.stringify(s)}));}
