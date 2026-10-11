@@ -9,7 +9,8 @@
     KMRY:{r:'centralca'},KSNS:{r:'centralca'},KSMF:{r:'centralca'},KSAC:{r:'centralca'},KMHR:{r:'centralca'},KSBP:{r:'centralca'},KSMX:{r:'centralca'},KSBA:{r:'centralca'},KIZA:{r:'centralca'},
     KLAX:{r:'socal'},KVNY:{r:'socal'},KBUR:{r:'socal'},KSMO:{r:'socal'},KLGB:{r:'socal'},KSNA:{r:'socal'},KONT:{r:'socal'},KCMA:{r:'socal'},KSAN:{r:'socal'},KMYF:{r:'socal'},KCRQ:{r:'socal'},KPSP:{r:'socal'},
     KSEA:{r:'pnw'},KBFI:{r:'pnw'},KPAE:{r:'pnw'},KTIW:{r:'pnw'},KOLM:{r:'pnw'},KGEG:{r:'pnw'},KPDX:{r:'pnw'},KHIO:{r:'pnw'},KTTD:{r:'pnw'},KEUG:{r:'pnw'},KRDM:{r:'pnw'},KMFR:{r:'pnw'},
-    KLAS:{r:'desert'},KHND:{r:'desert'},KVGT:{r:'desert'},KPHX:{r:'desert'},KSDL:{r:'desert'},KIWA:{r:'desert'},KBOI:{r:'mountain'},KSLC:{r:'mountain'},KAPA:{r:'mountain'},KDEN:{r:'mountain'}
+    KLAS:{r:'desert'},KHND:{r:'desert'},KVGT:{r:'desert'},KPHX:{r:'desert'},KSDL:{r:'desert'},KIWA:{r:'desert'},KBOI:{r:'mountain'},KSLC:{r:'mountain'},KAPA:{r:'mountain'},KDEN:{r:'mountain'},
+    KTEB:{r:'east'},KHPN:{r:'east'},KBOS:{r:'east'},KIAD:{r:'east'},KORD:{r:'central'},KMDW:{r:'central'},KDAL:{r:'central'},KDFW:{r:'central'},KAUS:{r:'central'},KHOU:{r:'central'},KMSY:{r:'south'},KATL:{r:'south'},KMIA:{r:'south'},KOPF:{r:'south'},KPBI:{r:'south'},KTPA:{r:'south'},KMCO:{r:'south'},KBNA:{r:'south'},KASE:{r:'mountain'},KEGE:{r:'mountain'},KJAC:{r:'mountain'},KBZN:{r:'mountain'},KMSP:{r:'central'},KDTW:{r:'east'},CYVR:{r:'canada'},CYYC:{r:'canada'},CYYZ:{r:'canada'},MMTJ:{r:'mexico'},MMSD:{r:'mexico'},MMPR:{r:'mexico'},MMMX:{r:'mexico'},MYNN:{r:'caribbean'},TJSJ:{r:'caribbean'}
   };
 
   const REGION_POOLS={
@@ -42,7 +43,7 @@
   ];
 
   const TIMES=['06:20','07:05','07:50','08:35','09:20','10:10','11:05','12:15','13:20','14:30','15:40','16:50','18:05','19:20'];
-  const REGION_ORDER=['sierra','bay','centralca','socal','pnw','desert','mountain'];
+  const REGION_ORDER=['sierra','bay','centralca','socal','pnw','desert','mountain','central','south','east','canada','mexico','caribbean'];
   function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
   function shuffle(arr){const out=arr.slice();for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}return out}
   function day(days){const d=new Date(Date.now()+days*86400000);return d.toISOString().slice(0,10)}
@@ -76,7 +77,8 @@
     KMRY:[36.59,-121.84],KSNS:[36.66,-121.61],KSMF:[38.70,-121.59],KSAC:[38.51,-121.49],KMHR:[38.55,-121.30],KSBP:[35.24,-120.64],KSMX:[34.90,-120.46],KSBA:[34.43,-119.84],KIZA:[34.61,-120.08],
     KLAX:[33.94,-118.41],KVNY:[34.21,-118.49],KBUR:[34.20,-118.36],KSMO:[34.02,-118.45],KLGB:[33.82,-118.15],KSNA:[33.68,-117.87],KONT:[34.06,-117.60],KCMA:[34.21,-119.09],KSAN:[32.73,-117.19],KMYF:[32.82,-117.14],KCRQ:[33.13,-117.28],KPSP:[33.83,-116.51],
     KSEA:[47.45,-122.31],KBFI:[47.53,-122.30],KPAE:[47.91,-122.28],KTIW:[47.27,-122.58],KOLM:[46.97,-122.90],KGEG:[47.62,-117.53],KPDX:[45.59,-122.60],KHIO:[45.54,-122.95],KTTD:[45.55,-122.40],KEUG:[44.12,-123.21],KRDM:[44.25,-121.15],KMFR:[42.37,-122.87],
-    KLAS:[36.08,-115.15],KHND:[35.97,-115.13],KVGT:[36.21,-115.19],KPHX:[33.43,-112.01],KSDL:[33.62,-111.91],KIWA:[33.31,-111.65],KBOI:[43.56,-116.22],KSLC:[40.79,-111.98],KAPA:[39.57,-104.85],KDEN:[39.86,-104.67]
+    KLAS:[36.08,-115.15],KHND:[35.97,-115.13],KVGT:[36.21,-115.19],KPHX:[33.43,-112.01],KSDL:[33.62,-111.91],KIWA:[33.31,-111.65],KBOI:[43.56,-116.22],KSLC:[40.79,-111.98],KAPA:[39.57,-104.85],KDEN:[39.86,-104.67],
+    KTEB:[40.85,-74.06],KHPN:[41.07,-73.71],KBOS:[42.36,-71.01],KIAD:[38.95,-77.46],KORD:[41.98,-87.90],KMDW:[41.79,-87.75],KDAL:[32.85,-96.85],KDFW:[32.90,-97.04],KAUS:[30.20,-97.67],KHOU:[29.65,-95.28],KMSY:[29.99,-90.26],KATL:[33.64,-84.43],KMIA:[25.80,-80.29],KOPF:[25.91,-80.28],KPBI:[26.68,-80.10],KTPA:[27.98,-82.53],KMCO:[28.43,-81.31],KBNA:[36.12,-86.68],KASE:[39.22,-106.87],KEGE:[39.64,-106.92],KJAC:[43.61,-110.74],KBZN:[45.78,-111.15],KMSP:[44.88,-93.22],KDTW:[42.21,-83.35],CYVR:[49.19,-123.18],CYYC:[51.12,-114.02],CYYZ:[43.68,-79.63],MMTJ:[32.54,-116.97],MMSD:[23.15,-109.72],MMPR:[20.68,-105.25],MMMX:[19.44,-99.07],MYNN:[25.04,-77.47],TJSJ:[18.44,-66.00]
   };
   function approximateDistance(origin,dest){
     const a=COORD[origin],b=COORD[dest];if(!a||!b)return null;
@@ -86,7 +88,7 @@
   }
   function aircraftProfile(){
     const a=selectedAircraft(),tail=String(a.tail||state.selectedAircraft||'');
-    return /800|HAWKER/i.test(tail+' '+(a.type||''))?
+    return /LONGITUDE|C700/i.test(tail+' '+(a.type||'')+' '+(a.model||''))?{tail,maxPax:8,maxBags:900,cruise:470,rate:7800,maxNm:3000,cls:'Super Midsize Jet'}:/800|HAWKER/i.test(tail+' '+(a.type||''))?
       {tail,maxPax:8,maxBags:600,cruise:410,rate:5900,maxNm:2050,cls:'Midsize Jet'}:
       {tail,maxPax:8,maxBags:700,cruise:490,rate:7400,maxNm:2600,cls:'Super Midsize Jet'};
   }
@@ -103,7 +105,7 @@
     const protectedRows=state.marketBoard.filter(x=>x&&(x.protected===true||x.manual===true||x.jobType==='CONTRACT'||x.status==='Accepted'));
     const used=new Set(protectedRows.map(x=>String(x.flight||'')));
     let n=nextNumber(used);
-    const destinations=pickDiverseDestinations(base,18).filter(dest=>{const nm=approximateDistance(base,dest);return nm!==null&&nm>=70&&nm<=plane.maxNm}).slice(0,12);
+    const destinations=pickDiverseDestinations(base,45).filter(dest=>{const nm=approximateDistance(base,dest);return nm!==null&&nm>=70&&nm<=plane.maxNm}).slice(0,18);
     const profiles=shuffle(PROFILES);
     const generated=[];
 
@@ -133,7 +135,7 @@
     }
 
     state.marketBoard=[...protectedRows,...generated];
-    state.marketRevision='Realistic Charter Market v3.0';
+    state.marketRevision='Expanded Domestic & International Charter Market v4.0';
     state.marketLocation=base;
     state.marketSeeded=true;
     saveState();
