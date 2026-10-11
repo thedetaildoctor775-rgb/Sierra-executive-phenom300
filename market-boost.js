@@ -13,6 +13,8 @@
     KTEB:{r:'east'},KHPN:{r:'east'},KBOS:{r:'east'},KIAD:{r:'east'},KORD:{r:'central'},KMDW:{r:'central'},KDAL:{r:'central'},KDFW:{r:'central'},KAUS:{r:'central'},KHOU:{r:'central'},KMSY:{r:'south'},KATL:{r:'south'},KMIA:{r:'south'},KOPF:{r:'south'},KPBI:{r:'south'},KTPA:{r:'south'},KMCO:{r:'south'},KBNA:{r:'south'},KASE:{r:'mountain'},KEGE:{r:'mountain'},KJAC:{r:'mountain'},KBZN:{r:'mountain'},KMSP:{r:'central'},KDTW:{r:'east'},CYVR:{r:'canada'},CYYC:{r:'canada'},CYYZ:{r:'canada'},MMTJ:{r:'mexico'},MMSD:{r:'mexico'},MMPR:{r:'mexico'},MMMX:{r:'mexico'},MYNN:{r:'caribbean'},TJSJ:{r:'caribbean'}
   };
 
+  Object.assign(AIRPORTS,{KJAC:{r:'adventure'},KASE:{r:'adventure'},KTEX:{r:'adventure'},KGPI:{r:'adventure'},KSEZ:{r:'adventure'},KPGA:{r:'adventure'},KEYW:{r:'islands'},PHOG:{r:'hawaii'},PHNL:{r:'hawaii'},TNCM:{r:'islands'},TIST:{r:'islands'},CYQB:{r:'canada'},CYLW:{r:'adventure'},KACK:{r:'islands'},KMVY:{r:'islands'},KPSO:{r:'adventure'},KGCN:{r:'adventure'},KBIH:{r:'adventure'},KHDN:{r:'adventure'},KSRQ:{r:'islands'},MYEF:{r:'islands'},MBPV:{r:'islands'},MKJS:{r:'islands'},TAPA:{r:'islands'},MROC:{r:'international'},MPTO:{r:'international'},EGLL:{r:'europe'},LFPB:{r:'europe'},LSZH:{r:'europe'},LFMN:{r:'europe'},LOWI:{r:'europe'},EGLF:{r:'europe'},BIRK:{r:'europe'},LFMD:{r:'europe'},RJTT:{r:'asia'},RJAA:{r:'asia'},WSSS:{r:'asia'},OMDB:{r:'middleeast'},NZAA:{r:'oceania'},YSSY:{r:'oceania'}});
+  const SCENIC_RESTRICTIONS=new Set(["KJAC","KASE","KTEX","KSEZ","KEYW","KGCN","MYEF","LOWI"]);
   const REGION_POOLS={
     sierra:['KMEV','KRNO','KTRK','KTVL','KSFO','KOAK','KSJC','KSQL','KSTS','KSMF','KMRY','KSBP','KSBA','KVNY','KLAX','KPSP','KLAS','KHND','KPDX','KSEA'],
     bay:['KMEV','KRNO','KTRK','KTVL','KSMF','KMRY','KSTS','KAPC','KSBA','KSBP','KVNY','KLAX','KSNA','KSAN','KPSP','KPDX','KSEA','KHND'],
@@ -43,7 +45,7 @@
   ];
 
   const TIMES=['06:20','07:05','07:50','08:35','09:20','10:10','11:05','12:15','13:20','14:30','15:40','16:50','18:05','19:20'];
-  const REGION_ORDER=['sierra','bay','centralca','socal','pnw','desert','mountain','central','south','east','canada','mexico','caribbean'];
+  const REGION_ORDER=['adventure','islands','hawaii','international','europe','asia','middleeast','oceania','sierra','bay','centralca','socal','pnw','desert','mountain','central','south','east','canada','mexico','caribbean'];
   function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
   function shuffle(arr){const out=arr.slice();for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}return out}
   function day(days){const d=new Date(Date.now()+days*86400000);return d.toISOString().slice(0,10)}
@@ -80,6 +82,7 @@
     KLAS:[36.08,-115.15],KHND:[35.97,-115.13],KVGT:[36.21,-115.19],KPHX:[33.43,-112.01],KSDL:[33.62,-111.91],KIWA:[33.31,-111.65],KBOI:[43.56,-116.22],KSLC:[40.79,-111.98],KAPA:[39.57,-104.85],KDEN:[39.86,-104.67],
     KTEB:[40.85,-74.06],KHPN:[41.07,-73.71],KBOS:[42.36,-71.01],KIAD:[38.95,-77.46],KORD:[41.98,-87.90],KMDW:[41.79,-87.75],KDAL:[32.85,-96.85],KDFW:[32.90,-97.04],KAUS:[30.20,-97.67],KHOU:[29.65,-95.28],KMSY:[29.99,-90.26],KATL:[33.64,-84.43],KMIA:[25.80,-80.29],KOPF:[25.91,-80.28],KPBI:[26.68,-80.10],KTPA:[27.98,-82.53],KMCO:[28.43,-81.31],KBNA:[36.12,-86.68],KASE:[39.22,-106.87],KEGE:[39.64,-106.92],KJAC:[43.61,-110.74],KBZN:[45.78,-111.15],KMSP:[44.88,-93.22],KDTW:[42.21,-83.35],CYVR:[49.19,-123.18],CYYC:[51.12,-114.02],CYYZ:[43.68,-79.63],MMTJ:[32.54,-116.97],MMSD:[23.15,-109.72],MMPR:[20.68,-105.25],MMMX:[19.44,-99.07],MYNN:[25.04,-77.47],TJSJ:[18.44,-66.00]
   };
+  Object.assign(COORD,{KJAC:[43.607,-110.738],KASE:[39.223,-106.869],KTEX:[37.954,-107.908],KGPI:[48.31,-114.256],KSEZ:[34.849,-111.788],KPGA:[36.926,-111.448],KEYW:[24.556,-81.759],PHOG:[20.899,-156.43],PHNL:[21.319,-157.922],TNCM:[18.041,-63.109],TIST:[18.337,-64.973],CYQB:[46.791,-71.393],CYLW:[49.957,-119.378],KACK:[41.253,-70.06],KMVY:[41.393,-70.615],KPSO:[37.286,-107.056],KGCN:[35.952,-112.147],KBIH:[37.373,-118.364],KHDN:[40.481,-107.218],KSRQ:[27.395,-82.554],MYEF:[23.562,-75.878],MBPV:[21.774,-72.266],MKJS:[18.504,-77.913],TAPA:[17.137,-61.792],MROC:[9.994,-84.209],MPTO:[9.071,-79.383],EGLL:[51.47,-0.454],LFPB:[48.97,2.441],LSZH:[47.458,8.548],LFMN:[43.665,7.215],LOWI:[47.26,11.344],EGLF:[51.276,-0.776],BIRK:[64.13,-21.94],LFMD:[43.542,6.953],RJTT:[35.549,139.779],RJAA:[35.765,140.386],WSSS:[1.364,103.992],OMDB:[25.253,55.366],NZAA:[-37.008,174.792],YSSY:[-33.946,151.177]});
   function approximateDistance(origin,dest){
     const a=COORD[origin],b=COORD[dest];if(!a||!b)return null;
     const rad=Math.PI/180,dlat=(b[0]-a[0])*rad,dlon=(b[1]-a[1])*rad;
@@ -105,13 +108,26 @@
     const protectedRows=state.marketBoard.filter(x=>x&&(x.protected===true||x.manual===true||x.jobType==='CONTRACT'||x.status==='Accepted'));
     const used=new Set(protectedRows.map(x=>String(x.flight||'')));
     let n=nextNumber(used);
-    const destinations=pickDiverseDestinations(base,45).filter(dest=>{const nm=approximateDistance(base,dest);return nm!==null&&nm>=70&&nm<=plane.maxNm}).slice(0,18);
+    const destinations=pickDiverseDestinations(base,Math.max(90,Object.keys(AIRPORTS).length)).filter(dest=>{
+      const nm=approximateDistance(base,dest);
+      // Scenic airports with special runway, elevation, terrain or access concerns
+      // require separate performance validation and are not automatically bookable.
+      return nm!==null&&nm>=70&&nm<=plane.maxNm&&!SCENIC_RESTRICTIONS.has(dest);
+    }).slice(0,24);
     const profiles=shuffle(PROFILES);
+    const luxuryProfiles=[
+      {client:'Summit Alpine Retreats',category:'Adventure',type:'Ski Resort Charter',event:'Luxury ski vacation and mountain resort transfer',pax:[2,6],bagMode:'sports',premium:7200},
+      {client:'Island Escape Concierge',category:'Luxury Leisure',type:'Island Vacation Charter',event:'Private island vacation with resort coordination',pax:[2,6],bagMode:'leisure',premium:7900},
+      {client:'Heritage Golf Collection',category:'Sports',type:'Golf Resort Charter',event:'Private golf club getaway',pax:[3,6],bagMode:'golf',premium:6800},
+      {client:'Grand Expedition Travel',category:'Adventure',type:'National Park Adventure',event:'National park and wilderness lodge visit',pax:[2,6],bagMode:'leisure',premium:6500},
+      {client:'Atlas Private Journeys',category:'International',type:'International VIP Charter',event:'International executive and leisure travel; customs and entry requirements apply',pax:[2,6],bagMode:'vip',premium:8500},
+      {client:'Sierra Executive Concierge',category:'Luxury Leisure',type:'Multi-Day Resort Charter',event:'Multi-day private charter with optional return and repositioning legs (book separately)',pax:[2,6],bagMode:'leisure',premium:8000}
+    ];
     const generated=[];
 
     for(let i=0;i<destinations.length;i++){
       while(used.has('SXR'+n))n++;
-      const p=profiles[i%profiles.length],dest=destinations[i],distance=approximateDistance(base,dest),pax=rand(Math.min(p.pax[0],plane.maxPax),Math.min(p.pax[1],plane.maxPax));
+      const p=(i%3===0?luxuryProfiles[Math.floor(i/3)%luxuryProfiles.length]:profiles[i%profiles.length]),dest=destinations[i],distance=approximateDistance(base,dest),pax=rand(Math.min(p.pax[0],plane.maxPax),Math.min(p.pax[1],plane.maxPax));
       const lastMinute=i<3;
       const bags=Math.min(plane.maxBags,realisticBaggage(p,pax,distance));
       const flightHours=Math.round((distance*1.08/plane.cruise+.35)*10)/10;
@@ -128,19 +144,19 @@
         expiry:new Date(now+expiryHours*3600000).toISOString(),event,
         category:p.category,charterType:lastMinute?'Last-Minute '+p.type:p.type,jobType:'MARKET',
         minClass:plane.cls,distance,estimatedFlightHours:flightHours,estimatedCost,estimatedProfit:value-estimatedCost,aircraft:plane.tail,
-        departureDate:day(depDay),departureTime,status:'Available',westCoastMarket:true,
+        departureDate:day(depDay),departureTime,status:'Available',westCoastMarket:true,international:!dest.startsWith('K')&&!dest.startsWith('PH'),requiresCustoms:!dest.startsWith('K')&&!dest.startsWith('PH'),
         lastMinute,availability:lastMinute?'LAST MINUTE':'SCHEDULED',rushPremium
       });
       used.add('SXR'+n);n++;
     }
 
     state.marketBoard=[...protectedRows,...generated];
-    state.marketRevision='Expanded Domestic & International Charter Market v4.0';
+    state.marketRevision='Scenic Worldwide Charter Market v5.0';
     state.marketLocation=base;
     state.marketSeeded=true;
     saveState();
     if(!silent&&typeof renderMarket==='function')renderMarket();
-    if(!silent&&typeof g==='function'&&g('marketStatus'))g('marketStatus').textContent='Charter market from '+base+' • '+plane.tail+' • great-circle distances, aircraft loads, estimated costs and last-minute requests.';
+    if(!silent&&typeof g==='function'&&g('marketStatus'))g('marketStatus').textContent='Charter market from '+base+' • '+plane.tail+' • scenic destinations, international requests, aircraft-range screening and estimated costs. Special-airport performance must be verified.';
   }
 
   const originalSeedMarket=seedMarket;
