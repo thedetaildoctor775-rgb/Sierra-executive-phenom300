@@ -55,7 +55,7 @@ function css(){if(document.getElementById('sxf-style'))return;const e=document.c
  `;document.head.appendChild(e)}
 function render(force=false){const host=document.getElementById('opsCenter')||document.querySelector('main.content');if(!host)return;const r=route(),key=r.dep+'|'+r.arr+'|'+JSON.stringify(load());
  if(!force&&key===last&&document.getElementById('sx-fbo-locator'))return;if(editing&&!force)return;last=key;css();
- let el=document.getElementById('sx-fbo-locator');if(!el){el=document.createElement('section');el.id='sx-fbo-locator';host.prepend(el);}
+ let el=document.getElementById('sx-fbo-locator');if(!el){el=document.createElement('section');el.id='sx-fbo-locator';if(host.id==='opsCenter')host.before(el);else host.prepend(el);}
  el.innerHTML='<h3>FBO Locator · Sierra Executive Charter</h3><p class="sxf-sub">Follows your active charter. Saves your preferred handler for repeat visits. Links open FBO listings, map locations and airport-diagram searches.</p><div class="sxf-grid">'+sideHTML('Departure',r.dep)+sideHTML('Arrival',r.arr)+'</div>';
  el.querySelectorAll('select[data-sxf-side]').forEach(x=>x.onchange=()=>{if(x.value)syncSelection(x.dataset.sxfSide,x.dataset.sxfCode,x.value)});
  el.querySelectorAll('button[data-sxf-save]').forEach(x=>x.onclick=()=>{const field=el.querySelector('[data-sxf-custom="'+x.dataset.sxfSave+'"]');const value=field?.value?.trim();if(value)syncSelection(x.dataset.sxfSave,x.dataset.sxfCode,value)});
