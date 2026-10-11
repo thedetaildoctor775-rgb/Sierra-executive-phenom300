@@ -83,6 +83,23 @@ function install(){
     restoreSimBriefDisplay=wrapped;
   }
   document.addEventListener('input',e=>{if(e.target?.id==='alternate'||e.target?.id==='cruiseLevel')updateWarning();});
+  // Repair a charter accepted before this guard was installed, without
+  // invalidating a matching, newly imported OFP.
+  const st=currentState(),a=st?.activeAssignment,sb=st?.simbrief;
+  if(a&&String(st.workflow||'').toLowerCase()!=='completed'){
+    const matching=sb&&sb.origin===a.origin&&sb.destination===a.dest;
+    if(!matching){
+      const offer=(st.marketBoard||[]).find(x=>x.flight===a.flight);
+      st.simbrief=null;
+      input('route','');input('simbriefOFP','');
+      for(const id of ['blockFuel','tripFuel','taxiFuel','arrivalFuel','zfw','rampWeight','tow'])input(id,'');
+      label('simbriefStatus','NOT IMPORTED — MATCHING OFP NEEDED');
+      label('simbriefImportedAt','—');
+      const suggested=suggestLevel(Number(offer?.distance));
+      if(suggested){st.cruiseLevel=suggested;input('cruiseLevel',suggested);}
+      if(typeof saveState==='function')saveState();
+    }
+  }
   updateWarning();
   return true;
 }
