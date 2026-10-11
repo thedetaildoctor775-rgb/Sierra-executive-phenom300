@@ -68,7 +68,8 @@ function repairFleetCards(){
       if(!a)return;
       const metas=[...card.querySelectorAll('.meta')];
       const locMeta=metas.find(m=>/Location\s/i.test(m.textContent));
-      if(locMeta)locMeta.textContent=`Location ${a.location||'—'} • Home ${HOME_BASE}`;
+      if(locMeta)locMeta.textContent=`Location ${a.location||'—'} • Home ${HOME_BASE} • ${a.status||'Available'}`;
+      metas.forEach(m=>{if(['undefined','null',''].includes(m.textContent.trim()))m.textContent=a.profile||a.type||'';});
       else if(metas.length)metas[0].textContent=`Location ${a.location||'—'} • Home ${HOME_BASE} • ${a.status||'Available'}`;
     });
     const selected=state?.selectedAircraft;
@@ -92,9 +93,16 @@ selectAircraft=function(tail){
   state.selectedAircraft=tail;
   if(!workflowBusy()) state.activeAircraft=null;
   applyStoredLocations(false);
+  if(!workflowBusy()){
+    try{
+      if(typeof sxWestCoastMarket==='function')sxWestCoastMarket(true);
+      else if(typeof seedMarket==='function')seedMarket(true);
+    }catch(e){console.warn('Market regeneration failed',e);}
+  }
   saveCleanState();
   try{if(typeof renderFleet==='function')renderFleet();}catch(e){}
   try{if(typeof sync==='function')sync();}catch(e){}
+  try{if(typeof renderMarket==='function')renderMarket();}catch(e){}
   repairFleetCards();
 };
 
