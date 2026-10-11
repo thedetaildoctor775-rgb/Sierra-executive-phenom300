@@ -108,12 +108,24 @@
     const protectedRows=state.marketBoard.filter(x=>x&&(x.protected===true||x.manual===true||x.jobType==='CONTRACT'||x.status==='Accepted'));
     const used=new Set(protectedRows.map(x=>String(x.flight||'')));
     let n=nextNumber(used);
-    const destinations=pickDiverseDestinations(base,Math.max(90,Object.keys(AIRPORTS).length)).filter(dest=>{
+    // Build the eligible pool BEFORE diversity selection so distant regions
+    // cannot crowd out reachable scenic airports.
+    const eligible=shuffle(Object.keys(AIRPORTS).filter(dest=>{
       const nm=approximateDistance(base,dest);
-      // Scenic airports with special runway, elevation, terrain or access concerns
-      // require separate performance validation and are not automatically bookable.
-      return nm!==null&&nm>=70&&nm<=plane.maxNm&&!SCENIC_RESTRICTIONS.has(dest);
-    }).slice(0,24);
+      return dest!==base&&nm!==null&&nm>=70&&nm<=plane.maxNm&&!SCENIC_RESTRICTIONS.has(dest);
+    }));
+    const regionBuckets={};
+    eligible.forEach(dest=>(regionBuckets[region(dest)]??=[]).push(dest));
+    const destinations=[];
+    // Round-robin by region; rotate the starting region on every refresh.
+    const regionKeys=shuffle(Object.keys(regionBuckets));
+    while(destinations.length<24&&regionKeys.some(r=>regionBuckets[r].length)){
+      for(const r of regionKeys){
+        if(destinations.length>=24)break;
+        const next=regionBuckets[r].shift();
+        if(next)destinations.push(next);
+      }
+    }
     const profiles=shuffle(PROFILES);
     const luxuryProfiles=[
       {client:'Summit Alpine Retreats',category:'Adventure',type:'Ski Resort Charter',event:'Luxury ski vacation and mountain resort transfer',pax:[2,6],bagMode:'sports',premium:7200},
@@ -137,7 +149,9 @@
       const depDay=lastMinute?0:(i<7?0:(i<11?1:2));
       const departureTime=lastMinute?timePlusHours(1.5+i*.75):(depDay===0?timePlusHours(4+i*.45):TIMES[i%TIMES.length]);
       const expiryHours=lastMinute?(0.7+i*.35):(4.5+i*1.15);
-      const event=lastMinute?('LAST-MINUTE REQUEST • '+p.event+' • Client needs rapid confirmation and expedited FBO coordination.'):p.event;
+      const international=!dest.startsWith('K')&&!dest.startsWith('PH');
+      const opsNotice=international?' • INTERNATIONAL: verify customs, entry permissions, overflight permits and airport handling.':' • Verify runway, terrain, weather, NOTAMs and aircraft performance before dispatch.';
+      const event=(lastMinute?('LAST-MINUTE REQUEST • '+p.event+' • Client needs rapid confirmation and expedited FBO coordination.'):p.event)+opsNotice;
 
       generated.push({
         flight:'SXR'+n,origin:base,dest,client:p.client,pax,bags,value,
@@ -151,7 +165,7 @@
     }
 
     state.marketBoard=[...protectedRows,...generated];
-    state.marketRevision='Scenic Worldwide Charter Market v5.0';
+    state.marketRevision='Scenic Worldwide Charter Market v5.1';
     state.marketLocation=base;
     state.marketSeeded=true;
     saveState();
