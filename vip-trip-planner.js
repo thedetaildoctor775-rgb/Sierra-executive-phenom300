@@ -36,6 +36,8 @@ function render(){
   const t={id:String(Date.now()),tail:a.tail,nights,pax,start,legs,settings:{...DEFAULT},status:'Planned',created:new Date().toISOString()};
   save([t,...read()].slice(0,MX));render();
  };
+ const active=typeof state!=='undefined'&&state.activeAssignment;
+ if(active)box.insertAdjacentHTML('beforeend','<p style="color:#ffd991">Active dispatch: '+esc(active.flight)+' • '+esc(active.origin)+' → '+esc(active.dest)+' • '+esc(active.aircraft)+'. Existing flight will not be replaced.</p>');
  const plans=box.querySelector('#sxPlans');
  plans.innerHTML=trips.length?trips.map(t=>{
  const c=calculate(t),a=typeof state!=='undefined'?state.fleet?.[t.tail]:null;
@@ -49,10 +51,10 @@ function render(){
   cursor=new Date(cursor.getTime()+(num(l.flightHours)+num(l.groundHours))*3600000);
   legHtml+='<div style="padding:7px;border-top:1px solid #285056"><b>Leg '+(i+1)+': '+esc(l.from)+' → '+esc(l.to)+'</b> • '+esc(l.kind)+'<br><small>Estimated departure '+esc(start)+'</small><br>Flight hours <input data-i="'+i+'" data-k="flightHours" type="number" min=".1" max="20" step=".1" value="'+num(l.flightHours)+'" style="width:65px"> Ground hours <input data-i="'+i+'" data-k="groundHours" type="number" min="0" max="72" step=".5" value="'+num(l.groundHours)+'" style="width:65px"> Revenue $<input data-i="'+i+'" data-k="revenue" type="number" min="0" max="10000000" step="100" value="'+num(l.revenue)+'" style="width:100px"> <select data-i="'+i+'" data-k="status">'+['Planned','Ready','Departed','Landed','Completed'].map(v=>'<option '+(l.status===v?'selected':'')+'>'+v+'</option>').join('')+'</select></div>';
  });
- if(currentHours+c.flight>=t.settings.inspectionInterval*Math.ceil((currentHours+.001)/t.settings.inspectionInterval))flags.push('Maintenance planning: projected aircraft hours may cross a '+t.settings.inspectionInterval+'-hour inspection milestone.');
+ if(t.settings.inspectionInterval>0&&currentHours+c.flight>=t.settings.inspectionInterval*Math.ceil((currentHours+.001)/t.settings.inspectionInterval))flags.push('Maintenance planning: projected aircraft hours may cross a '+t.settings.inspectionInterval+'-hour inspection milestone.');
  if(t.legs.some(l=>!l.to.startsWith('K')&&!l.to.startsWith('PH')))flags.push('International legs: verify customs, permits, entry requirements and handling.');
  flags.push('Runway suitability, fuel stops, terrain, weather and real crew duty/rest rules require manual verification.');
- return '<article data-trip="'+esc(t.id)+'" style="border-top:2px solid #2fe3f2;margin-top:15px;padding-top:10px"><h4>'+esc(t.tail)+' • '+t.legs.map(l=>esc(l.from)).join(' → ')+' → '+esc(t.legs.at(-1).to)+'</h4><p>'+t.nights+' nights • '+t.pax+' passengers • '+c.flight.toFixed(1)+' estimated flight hours • '+t.legs.length+' cycles</p>'+legHtml+'<p>Estimated revenue <b>'+dollars(c.revenue)+'</b> • Estimated operating costs <b>'+dollars(c.total)+'</b> • Estimated profit <b>'+dollars(c.profit)+'</b></p><details><summary>Operating cost breakdown & rates</summary>'+Object.entries(c.costs).map(([k,v])=>esc(k)+': '+dollars(v)).join(' • ')+'<p>Fuel $/hr <input data-setting="fuelPerHour" type="number" min="0" value="'+t.settings.fuelPerHour+'" style="width:90px"> Crew $/hr <input data-setting="crewHourly" type="number" min="0" value="'+t.settings.crewHourly+'" style="width:90px"> Maintenance $/hr <input data-setting="maintenanceHour" type="number" min="0" value="'+t.settings.maintenanceHour+'" style="width:90px"></p></details><p>Aircraft logged: '+currentHours.toFixed(1)+' hr / '+cycles+' cycles. Projected: '+(currentHours+c.flight).toFixed(1)+' hr / '+(cycles+t.legs.length)+' cycles. (Not posted to fleet until flights are closed.)</p><p style="color:#ffd991">'+[...new Set(flags)].map(esc).join('<br>')+'</p><button data-save>Save Changes</button> <button data-remove>Delete Trip</button></article>';
+ return '<article data-trip="'+esc(t.id)+'" style="border-top:2px solid #2fe3f2;margin-top:15px;padding-top:10px"><h4>'+esc(t.tail)+' • '+t.legs.map(l=>esc(l.from)).join(' → ')+' → '+esc(t.legs.at(-1).to)+'</h4><p>'+t.nights+' nights • '+t.pax+' passengers • '+c.flight.toFixed(1)+' estimated flight hours • '+t.legs.length+' cycles</p>'+legHtml+'<p>Estimated revenue <b>'+dollars(c.revenue)+'</b> • Estimated operating costs <b>'+dollars(c.total)+'</b> • Estimated profit <b>'+dollars(c.profit)+'</b></p><details><summary>Operating cost breakdown & rates</summary>'+Object.entries(c.costs).map(([k,v])=>esc(k)+': '+dollars(v)).join(' • ')+'<p>Fuel $/hr <input data-setting="fuelPerHour" type="number" min="0" value="'+t.settings.fuelPerHour+'" style="width:90px"> Crew $/hr <input data-setting="crewHourly" type="number" min="0" value="'+t.settings.crewHourly+'" style="width:90px"> Maintenance $/hr <input data-setting="maintenanceHour" type="number" min="0" value="'+t.settings.maintenanceHour+'" style="width:90px"></p></details><p>Aircraft logged: '+currentHours.toFixed(1)+' hr / '+cycles+' cycles. Projected: '+(currentHours+c.flight).toFixed(1)+' hr / '+(cycles+t.legs.length)+' cycles. (Not posted to fleet until flights are closed.)</p><p style="color:#ffd991">'+[...new Set(flags)].map(esc).join('<br>')+'</p><button data-save>Save Changes</button> <button data-dispatch>Dispatch Next Leg</button> <button data-remove>Delete Trip</button></article>';
  }).join(''):'<p>No planned trips yet.</p>';
  plans.querySelectorAll('[data-trip]').forEach(card=>{
   const id=card.dataset.trip;
@@ -62,8 +64,49 @@ function render(){
    card.querySelectorAll('[data-setting]').forEach(el=>t.settings[el.dataset.setting]=Math.max(0,num(el.value)));
    save(all);render();
   };
+  card.querySelector('[data-dispatch]').onclick=()=>{
+   const all=read(),t=all.find(x=>x.id===id);if(!t)return;
+   const busy=typeof state!=='undefined'&&['accepted','duty','fuel','boarded','ready','departed','landed','parked'].includes(String(state.workflow||'').toLowerCase());
+   if(busy){alert('Finish the active charter before dispatching another leg.');return}
+   const next=t.legs.findIndex(l=>l.status!=='Completed');
+   if(next<0){alert('All trip legs completed.');return}
+   const l=t.legs[next],a=state.fleet?.[t.tail];
+   if(!a){alert('Aircraft is not in the fleet.');return}
+   if(String(a.location||'').toUpperCase()!==l.from){alert('Aircraft is at '+a.location+', not '+l.from+'. Reposition or correct the plan first.');return}
+   if(!confirm('Create dispatch for '+t.tail+' '+l.from+' → '+l.to+'? Flight will still require normal pilot confirmation.'))return;
+   const flight='SXR'+String(Date.now()).slice(-7);
+   const dep=new Date(t.start);
+   const day=Number.isFinite(dep.getTime())?dep.toISOString().slice(0,10):new Date().toISOString().slice(0,10);
+   const time=Number.isFinite(dep.getTime())?String(dep.getHours()).padStart(2,'0')+':'+String(dep.getMinutes()).padStart(2,'0'):'12:00';
+   const pax=l.kind==='Return / reposition'?0:t.pax;
+   const offer={flight,origin:l.from,dest:l.to,aircraft:t.tail,client:'Sierra Executive VIP Trip',pax,bags:0,value:num(l.revenue),category:'VIP',charterType:l.kind,jobType:'CONTRACT',minClass:a.type,departureDate:day,departureTime:time,expiry:new Date(Date.now()+86400000).toISOString(),event:'Multi-leg trip • leg '+(next+1)+'/'+t.legs.length+' • verify route, fuel, alternate, crew and performance',status:'Available',protected:true,manual:true,tripId:t.id,tripLeg:next};
+   state.selectedAircraft=t.tail;
+   state.marketBoard=Array.isArray(state.marketBoard)?state.marketBoard:[];
+   state.marketBoard.push(offer);
+   if(typeof saveState==='function')saveState();
+   if(typeof renderMarket==='function')renderMarket();
+   if(typeof acceptMarket==='function'){
+      const idx=state.marketBoard.indexOf(offer);
+      if(idx>=0)acceptMarket(idx);
+   }
+   if(state.activeAssignment?.flight===flight){l.status='Dispatched';l.flight=flight;save(all);render()}
+ };
   card.querySelector('[data-remove]').onclick=()=>{if(confirm('Delete this trip plan?')){save(read().filter(x=>x.id!==id));render()}};
  });
+}
+if(typeof closeFlight==='function'){
+ const originalClose=closeFlight;
+ closeFlight=function(...args){
+  const before=state.activeAssignment?.flight||document.getElementById('flightId')?.value;
+  const result=originalClose.apply(this,args);
+  const completed=(state.log||[]).some(x=>x.flight===before&&x.status==='Completed');
+  if(completed){
+   const all=read();let changed=false;
+   all.forEach(t=>t.legs.forEach(l=>{if(l.flight===before&&l.status!=='Completed'){l.status='Completed';changed=true}}));
+   if(changed){save(all);render()}
+  }
+  return result;
+ };
 }
 setTimeout(render,1500);
 })();
