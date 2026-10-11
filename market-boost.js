@@ -68,29 +68,54 @@
     return round5(personal+equipment);
   }
 
-  function approximateDistance(origin,dest){const a=region(origin),b=region(dest);if(a===b)return rand(90,420);const near={sierra:new Set(['bay','centralca','desert']),bay:new Set(['sierra','centralca']),centralca:new Set(['sierra','bay','socal']),socal:new Set(['centralca','desert']),pnw:new Set(['sierra','bay','mountain']),desert:new Set(['sierra','socal','mountain']),mountain:new Set(['pnw','sierra','desert'])};if(near[a]&&near[a].has(b))return rand(280,760);if((a==='pnw'&&b==='socal')||(a==='socal'&&b==='pnw'))return rand(850,1250);return rand(520,1050)}
+  // Approximate airport reference coordinates, used to calculate great-circle NM.
+  // Planning-only values; operational routing and fuel always come from the OFP.
+  const COORD={
+    KMEV:[39.00,-119.75],KRNO:[39.50,-119.77],KTRK:[39.32,-120.14],KTVL:[38.89,-119.99],KMMH:[37.62,-118.84],
+    KSFO:[37.62,-122.38],KOAK:[37.72,-122.22],KSJC:[37.36,-121.93],KSQL:[37.51,-122.25],KHWD:[37.66,-122.12],KCCR:[37.99,-122.06],KAPC:[38.21,-122.28],KSTS:[38.51,-122.81],
+    KMRY:[36.59,-121.84],KSNS:[36.66,-121.61],KSMF:[38.70,-121.59],KSAC:[38.51,-121.49],KMHR:[38.55,-121.30],KSBP:[35.24,-120.64],KSMX:[34.90,-120.46],KSBA:[34.43,-119.84],KIZA:[34.61,-120.08],
+    KLAX:[33.94,-118.41],KVNY:[34.21,-118.49],KBUR:[34.20,-118.36],KSMO:[34.02,-118.45],KLGB:[33.82,-118.15],KSNA:[33.68,-117.87],KONT:[34.06,-117.60],KCMA:[34.21,-119.09],KSAN:[32.73,-117.19],KMYF:[32.82,-117.14],KCRQ:[33.13,-117.28],KPSP:[33.83,-116.51],
+    KSEA:[47.45,-122.31],KBFI:[47.53,-122.30],KPAE:[47.91,-122.28],KTIW:[47.27,-122.58],KOLM:[46.97,-122.90],KGEG:[47.62,-117.53],KPDX:[45.59,-122.60],KHIO:[45.54,-122.95],KTTD:[45.55,-122.40],KEUG:[44.12,-123.21],KRDM:[44.25,-121.15],KMFR:[42.37,-122.87],
+    KLAS:[36.08,-115.15],KHND:[35.97,-115.13],KVGT:[36.21,-115.19],KPHX:[33.43,-112.01],KSDL:[33.62,-111.91],KIWA:[33.31,-111.65],KBOI:[43.56,-116.22],KSLC:[40.79,-111.98],KAPA:[39.57,-104.85],KDEN:[39.86,-104.67]
+  };
+  function approximateDistance(origin,dest){
+    const a=COORD[origin],b=COORD[dest];if(!a||!b)return null;
+    const rad=Math.PI/180,dlat=(b[0]-a[0])*rad,dlon=(b[1]-a[1])*rad;
+    const h=Math.sin(dlat/2)**2+Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dlon/2)**2;
+    return Math.round(3440.065*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h))));
+  }
+  function aircraftProfile(){
+    const a=selectedAircraft(),tail=String(a.tail||state.selectedAircraft||'');
+    return /800|HAWKER/i.test(tail+' '+(a.type||''))?
+      {tail,maxPax:8,maxBags:600,cruise:410,rate:5900,maxNm:2050,cls:'Midsize Jet'}:
+      {tail,maxPax:8,maxBags:700,cruise:490,rate:7400,maxNm:2600,cls:'Super Midsize Jet'};
+  }
   function routePool(base){const own=region(base);const primary=(REGION_POOLS[own]||[]).slice();const allWest=Object.keys(AIRPORTS).filter(x=>x!==base);const local=allWest.filter(x=>region(x)===own);const otherRegions=REGION_ORDER.filter(r=>r!==own);const regional=[];otherRegions.forEach(r=>regional.push(...shuffle(allWest.filter(x=>region(x)===r)).slice(0,4)));return [...shuffle(local),...shuffle(primary),...shuffle(regional),...shuffle(allWest)]}
   function pickDiverseDestinations(base,count){const pool=routePool(base).filter(x=>x!==base);const out=[];const seenRegions=new Set();for(const dest of pool){const r=region(dest);if(!seenRegions.has(r)&&!out.includes(dest)){out.push(dest);seenRegions.add(r)}if(out.length>=Math.min(count,6))break}for(const dest of pool){if(out.length>=count)break;if(!out.includes(dest))out.push(dest)}return out}
 
   function sxWestCoastMarket(silent){
     ensureFleet110();
-    const base=String(selectedAircraft().location||state.homeBase||'KMEV').toUpperCase();
+    const rawBase=String(selectedAircraft().location||state.homeBase||'KMEV').toUpperCase();
+    const base=COORD[rawBase]?rawBase:String(state.homeBase||'KMEV').toUpperCase();
+    const plane=aircraftProfile();
     state.marketBoard=Array.isArray(state.marketBoard)?state.marketBoard:[];
     const now=Date.now();
     const protectedRows=state.marketBoard.filter(x=>x&&(x.protected===true||x.manual===true||x.jobType==='CONTRACT'||x.status==='Accepted'));
     const used=new Set(protectedRows.map(x=>String(x.flight||'')));
     let n=nextNumber(used);
-    const destinations=pickDiverseDestinations(base,12);
+    const destinations=pickDiverseDestinations(base,18).filter(dest=>{const nm=approximateDistance(base,dest);return nm!==null&&nm>=70&&nm<=plane.maxNm}).slice(0,12);
     const profiles=shuffle(PROFILES);
     const generated=[];
 
     for(let i=0;i<destinations.length;i++){
       while(used.has('SXR'+n))n++;
-      const p=profiles[i%profiles.length],dest=destinations[i],distance=approximateDistance(base,dest),pax=rand(p.pax[0],p.pax[1]);
+      const p=profiles[i%profiles.length],dest=destinations[i],distance=approximateDistance(base,dest),pax=rand(Math.min(p.pax[0],plane.maxPax),Math.min(p.pax[1],plane.maxPax));
       const lastMinute=i<3;
-      const bags=realisticBaggage(p,pax,distance);
+      const bags=Math.min(plane.maxBags,realisticBaggage(p,pax,distance));
+      const flightHours=Math.round((distance*1.08/plane.cruise+.35)*10)/10;
       const rushPremium=lastMinute?rand(1800,4200):0;
-      const value=Math.round((p.premium+4200+distance*8.2+pax*275+rushPremium)/50)*50;
+      const value=Math.round((Math.max(1.2,flightHours)*plane.rate+p.premium*.35+rushPremium)/50)*50;
+      const estimatedCost=Math.round((Math.max(1.2,flightHours)*(plane.rate*.57)+650+bags*.5)/50)*50;
       const depDay=lastMinute?0:(i<7?0:(i<11?1:2));
       const departureTime=lastMinute?timePlusHours(1.5+i*.75):(depDay===0?timePlusHours(4+i*.45):TIMES[i%TIMES.length]);
       const expiryHours=lastMinute?(0.7+i*.35):(4.5+i*1.15);
@@ -100,7 +125,7 @@
         flight:'SXR'+n,origin:base,dest,client:p.client,pax,bags,value,
         expiry:new Date(now+expiryHours*3600000).toISOString(),event,
         category:p.category,charterType:lastMinute?'Last-Minute '+p.type:p.type,jobType:'MARKET',
-        minClass:distance>1050?'Midsize Jet':distance>650?'Super Light Jet':'Light Jet',distance,
+        minClass:plane.cls,distance,estimatedFlightHours:flightHours,estimatedCost,estimatedProfit:value-estimatedCost,aircraft:plane.tail,
         departureDate:day(depDay),departureTime,status:'Available',westCoastMarket:true,
         lastMinute,availability:lastMinute?'LAST MINUTE':'SCHEDULED',rushPremium
       });
@@ -108,12 +133,12 @@
     }
 
     state.marketBoard=[...protectedRows,...generated];
-    state.marketRevision='West Coast Diverse Market v2.3 KMEV Home Base';
+    state.marketRevision='Realistic Charter Market v3.0';
     state.marketLocation=base;
     state.marketSeeded=true;
     saveState();
     if(!silent&&typeof renderMarket==='function')renderMarket();
-    if(!silent&&typeof g==='function'&&g('marketStatus'))g('marketStatus').textContent='West Coast charter market active from '+base+' — KMEV home base, realistic baggage, scheduled and last-minute charter opportunities.';
+    if(!silent&&typeof g==='function'&&g('marketStatus'))g('marketStatus').textContent='Charter market from '+base+' • '+plane.tail+' • great-circle distances, aircraft loads, estimated costs and last-minute requests.';
   }
 
   const originalSeedMarket=seedMarket;
