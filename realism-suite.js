@@ -70,6 +70,8 @@ function show(){
  root.querySelector('#sxSimBrief').onclick=()=>{const a=active();if(!a){alert('Accept a charter first');return}const model=fl[a.aircraft]?.model||'';const url='https://dispatch.simbrief.com/options/custom?orig='+encodeURIComponent(a.origin)+'&dest='+encodeURIComponent(a.dest)+'&type='+encodeURIComponent(model);window.open(url,'_blank','noopener,noreferrer')};
  root.querySelector('#sxImportOFP').onclick=()=>{const a=active();if(!a){alert('No active charter');return}const raw=prompt('Paste SimBrief OFP reference or short extracted flight plan text (max 4000 characters):');if(!raw)return;data.dispatch[a.flight]={...(data.dispatch[a.flight]||{}),ofpText:raw.slice(0,4000),imported:new Date().toISOString(),verified:false};persist();root.querySelector('#sxReleaseResult').textContent='OFP reference saved for '+a.flight+' (unverified).'};
 }
+const originalAccept=typeof acceptMarket==='function'?acceptMarket:null;
+if(originalAccept){acceptMarket=function(i){const offer=state.marketBoard?.[i],tail=state.selectedAircraft;if(offer&&due(tail)){alert(tail+' is on a maintenance hold. Resolve defects and inspections in Operations Center before accepting this flight.');return}const c=crewById(assigned(tail));if(c&&(c.restUntil&&Date.parse(c.restUntil)>Date.now()||!c.types.includes(fleet()[tail]?.model))){alert('Assigned crew is unavailable or unqualified.');return}return originalAccept.apply(this,arguments)}}
 const originalClose=typeof closeFlight==='function'?closeFlight:null;
 if(originalClose){closeFlight=function(...args){const before=log().length;const result=originalClose.apply(this,args);if(log().length!==before){syncLogs();show()}return result}}
 setTimeout(show,1900);
