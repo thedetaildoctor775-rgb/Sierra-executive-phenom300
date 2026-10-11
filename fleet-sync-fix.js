@@ -4,6 +4,7 @@
 const HOME_BASE='KMEV';
 const DEFAULT_FLEET={
   N88SX:{tail:'N88SX',type:'Cessna Citation X',model:'C750',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'High-speed / long-range executive charter'},
+  N750SX:{tail:'N750SX',type:'Cessna Citation Longitude',model:'C700',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Super-midsize / long-range executive charter'},
   N800SX:{tail:'N800SX',type:'Hawker Beechcraft 800XP',model:'H25B',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter',callsign:'SIERRA EXECUTIVE',flightNumber:'SXR135'}
 };
 const ALLOWED_FLEET=new Set(Object.keys(DEFAULT_FLEET));
@@ -279,5 +280,5 @@ setTimeout(repairNow,500);
 setTimeout(()=>{repairNow();try{sync();}catch(e){}},1800);
 setTimeout(repairNow,3500);
 
-console.info('Sierra Fleet Sync Fix v5 — Citation X + Hawker only');
+console.info('Sierra Fleet Sync Fix v5 — Citation X + Hawker + Longitude');
 })();
