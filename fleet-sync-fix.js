@@ -18,6 +18,7 @@ function ensureFleetFixed(){
     state.fleet[tail]={
       ...old,
       ...defaults,
+      role:old.role||defaults.profile,
       home:HOME_BASE,
       location:String(old.location||defaults.location).toUpperCase(),
       status:old.status||defaults.status,
@@ -104,15 +105,20 @@ function reconcileFleetFixed(){
 function selectAircraftFixed(tail){
   ensureFleetFixed();
   if(!state.fleet[tail])return;
-  if(actuallyAirborne()&&state.activeAircraft&&state.activeAircraft!==tail){
-    alert('Land or reset the active flight before switching aircraft.');
+  if(workflowBusy()&&state.activeAircraft&&state.activeAircraft!==tail){
+    alert('Finish or reset the active flight before switching aircraft.');
     return;
   }
   state.selectedAircraft=tail;
-  state.activeAircraft=tail;
-  if(state.activeAssignment)state.activeAssignment.aircraft=tail;
-  enforceLocationFromWorkflow(tail);
+  if(!workflowBusy())state.activeAircraft=null;
+  // The existing market belongs to the previously selected aircraft.
+  // Preserve accepted/manual contracts; the generator handles these rows.
+  if(!workflowBusy()){
+    if(typeof sxWestCoastMarket==='function')sxWestCoastMarket(true);
+    else if(typeof seedMarket==='function')seedMarket(true);
+  }
   persistAndRefresh();
+  if(typeof renderMarket==='function')renderMarket();
 }
 
 function correctRenderedAircraft(){
@@ -150,7 +156,7 @@ function correctRenderedAircraft(){
       const metas=card.querySelectorAll('.meta');
       metas.forEach(m=>{
         const txt=m.textContent.trim();
-        if(txt==='undefined')m.textContent=fa.profile||'';
+        if(txt==='undefined'||txt==='null'||txt==='')m.textContent=fa.profile||fa.type||'';
         if(txt.includes('Home KRNO'))m.textContent=txt.replace('Home KRNO','Home '+HOME_BASE);
       });
     });
