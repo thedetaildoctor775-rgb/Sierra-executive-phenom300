@@ -6,6 +6,27 @@ const el=id=>document.getElementById(id);
 const input=(id,value)=>{const node=el(id);if(node)node.value=value;};
 const label=(id,value)=>{const node=el(id);if(node)node.textContent=value;};
 function currentState(){try{return typeof state!=='undefined'?state:null}catch(e){return null}}
+function distanceFor(a,offer){
+  const value=Number(offer?.distance||a?.distance);
+  if(value>0)return value;
+  // Common regional legs; used only to offer a conservative planning prompt.
+  const key=[a?.origin,a?.dest].join('>');
+  const known={'KLAX>KCRQ':75,'KCRQ>KLAX':75};
+  return known[key]||null;
+}
+function clearStaleFields(){
+  for(const id of ['route','simbriefOFP','blockFuel','tripFuel','taxiFuel','arrivalFuel','zfw','rampWeight','tow']){
+    input(id,'');
+    try{localStorage.setItem('p300_'+id,'')}catch(e){}
+  }
+}
+function setSuggestedLevel(st,a,offer){
+  const suggested=suggestLevel(distanceFor(a,offer));
+  if(suggested){
+    st.cruiseLevel=suggested;
+    input('cruiseLevel',suggested);
+  }
+}
 function suggestLevel(nm){
   if(!Number.isFinite(nm)||nm<=0)return '';
   if(nm<100)return 'FL160';
@@ -36,9 +57,8 @@ function resetForAccepted(offer){
   const st=currentState(),a=st?.activeAssignment;if(!a)return;
   // Never transfer a previous OFP to a newly accepted assignment.
   st.simbrief=null;
-  st.cruiseLevel=suggestLevel(Number(offer?.distance));
-  input('cruiseLevel',st.cruiseLevel);
-  for(const id of ['route','simbriefOFP','blockFuel','tripFuel','taxiFuel','arrivalFuel','zfw','rampWeight','tow'])input(id,'');
+  setSuggestedLevel(st,a,offer);
+  clearStaleFields();
   label('simbriefStatus','NOT IMPORTED — NEW CHARTER');
   label('simbriefImportedAt','—');
   // Do not populate a guessed alternate as if it were approved.
@@ -91,12 +111,10 @@ function install(){
     if(!matching){
       const offer=(st.marketBoard||[]).find(x=>x.flight===a.flight);
       st.simbrief=null;
-      input('route','');input('simbriefOFP','');
-      for(const id of ['blockFuel','tripFuel','taxiFuel','arrivalFuel','zfw','rampWeight','tow'])input(id,'');
+      clearStaleFields();
       label('simbriefStatus','NOT IMPORTED — MATCHING OFP NEEDED');
       label('simbriefImportedAt','—');
-      const suggested=suggestLevel(Number(offer?.distance));
-      if(suggested){st.cruiseLevel=suggested;input('cruiseLevel',suggested);}
+      setSuggestedLevel(st,a,offer);
       if(typeof saveState==='function')saveState();
     }
   }
