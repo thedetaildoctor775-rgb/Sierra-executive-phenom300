@@ -69,8 +69,8 @@ function repairFleetCards(){
       const metas=[...card.querySelectorAll('.meta')];
       const locMeta=metas.find(m=>/Location\s/i.test(m.textContent));
       if(locMeta)locMeta.textContent=`Location ${a.location||'—'} • Home ${HOME_BASE} • ${a.status||'Available'}`;
-      metas.forEach(m=>{if(['undefined','null',''].includes(m.textContent.trim()))m.textContent=a.profile||a.type||'';});
       else if(metas.length)metas[0].textContent=`Location ${a.location||'—'} • Home ${HOME_BASE} • ${a.status||'Available'}`;
+      metas.forEach(m=>{if(['undefined','null',''].includes(m.textContent.trim()))m.textContent=a.profile||a.type||'';});
     });
     const selected=state?.selectedAircraft;
     const selectedA=selected&&state?.fleet?.[selected];
