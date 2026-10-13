@@ -75,5 +75,11 @@ if(originalAccept){acceptMarket=function(i){const offer=state.marketBoard?.[i],t
 const originalClose=typeof closeFlight==='function'?closeFlight:null;
 if(originalClose){closeFlight=function(...args){const before=log().length;const result=originalClose.apply(this,args);if(log().length!==before){syncLogs();show()}return result}}
 setTimeout(show,1900);
-window.sxRealismSuite={refresh:show,canDispatch:tail=>!unavailable(tail),data:()=>data};
+window.sxRealismSuite={refresh:show,canDispatch:tail=>!unavailable(tail),data:()=>data,
+ addCrew:(name,types)=>{name=String(name||'').trim();types=String(types||'').toUpperCase().split(/[ ,;]+/).filter(Boolean);if(!name||!types.length)throw Error('Enter a crew name and aircraft qualifications.');data.crew.push({id:'crew-'+Date.now(),name,types,dutyHours:0,restUntil:''});persist();},
+ assignCrew:(tail,id)=>{if(!fleet()[tail])throw Error('Select an existing aircraft.');const c=crewById(id);if(id&&!c)throw Error('Select an existing crew.');if(c&&!c.types.includes(fleet()[tail].model))throw Error('Crew aircraft qualification does not match.');if(c&&Date.parse(c.restUntil)>Date.now())throw Error('Crew rest is incomplete.');if(c&&n(c.dutyHours)>=12)throw Error('Crew duty limit reached.');if(c&&Object.entries(data.assignments).some(([t,v])=>t!==tail&&v===id))throw Error('Crew is assigned to another aircraft.');data.assignments[tail]=id;persist();},
+ saveClient:(name,preferences)=>{name=String(name||'').trim();if(!name)throw Error('Enter a client name.');let c=data.clients.find(x=>x.name.toLowerCase()===name.toLowerCase());if(c)c.preferences=String(preferences||'');else data.clients.push({name,preferences:String(preferences||''),completed:0,spend:0});persist();},
+ maintenance:(tail,action,note)=>{if(!fleet()[tail])throw Error('Aircraft not found.');const m=maint(tail);if(action==='defect'){note=String(note||'').trim();if(!note)throw Error('Describe the defect.');m.defects.push({note,cleared:false,date:new Date().toISOString()});m.grounded=true;}else if(action==='inspect')m.lastInspectionHours=n(fleet()[tail].hours);else if(action==='release'){m.defects.forEach(d=>d.cleared=true);m.grounded=false;}else throw Error('Unknown maintenance action.');persist();},
+ restCrew:id=>{const c=crewById(id);if(!c)throw Error('Crew not found.');c.restUntil=new Date(Date.now()+10*3600000).toISOString();c.dutyHours=0;persist();}
+};
 })();

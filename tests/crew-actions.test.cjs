@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+process.chdir(require('node:path').resolve(__dirname,'..'));
+const storage=new Map(),s={fleet:{N88SX:{model:'C750',hours:25},N750SX:{model:'C700',hours:0}},log:[]};
+const ctx={state:s,window:{},console,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},setTimeout:()=>{},document:{getElementById:()=>null}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('realism-suite.js','utf8'),ctx);
+const api=ctx.window.sxRealismSuite;
+api.addCrew('Captain Test','C750, C700');const c=api.data().crew[0];assert.equal(c.name,'Captain Test');
+api.assignCrew('N88SX',c.id);assert.equal(api.data().assignments.N88SX,c.id);
+assert.throws(()=>api.assignCrew('N750SX',c.id),/another aircraft/);
+api.restCrew(c.id);assert(Date.parse(c.restUntil)>Date.now());assert.throws(()=>api.assignCrew('N88SX',c.id),/rest/);
+c.restUntil='';c.dutyHours=12;assert.throws(()=>api.assignCrew('N88SX',c.id),/duty/);c.dutyHours=0;c.types=['C700'];assert.throws(()=>api.assignCrew('N88SX',c.id),/qualification/);
+api.maintenance('N88SX','defect','Simulated tire issue');assert.equal(api.canDispatch('N88SX'),false);
+api.maintenance('N88SX','inspect');assert.equal(api.data().maintenance.N88SX.lastInspectionHours,25);
+api.maintenance('N88SX','release');assert.equal(api.data().maintenance.N88SX.grounded,false);
+api.saveClient('Test Client','Quiet cabin');api.saveClient('test client','No nuts');assert.equal(api.data().clients.length,1);assert.equal(api.data().clients[0].preferences,'No nuts');
+assert(storage.get('sx_realism_suite_v1').includes('No nuts'));assert.equal(s.log.length,0);assert.equal(Object.keys(s.fleet).length,2);
+console.log('PASS: crew assignment conflict, qualification, duty, rest, maintenance defect/inspection/release, client update, persistence, fleet and log preservation.');

@@ -1,6 +1,6 @@
 # Sierra Executive operations dashboard
 
-Matches the United Virtual airline OS structure with Sierra teal branding: light cards, dark sidebar, operations metrics, fleet overview, operations pulse, and a filterable flight table.
+Matches the United Virtual airline OS structure with the commercial OS navy and blue styling: light cards, dark sidebar, operations metrics, fleet overview, operations pulse, and a filterable flight table.
 
 ## Implemented
 
@@ -19,3 +19,7 @@ Matches the United Virtual airline OS structure with Sierra teal branding: light
 Run `node tests/airline-style.test.cjs` from the repository root. Checks cover route/type mismatch, maintenance hold, exact crew qualification, duty/rest limits, release invalidation, SimBrief parameters, flight-table deduplication, state preservation, loader integration, navigation fixes, and JavaScript syntax.
 
 Browser visual QA and live signed-in testing were not available in the implementation environment. Test iPad layout, cloud save/reload, live OFP import, FBO/weather services, and end-to-end flight completion on the deployed application. Legacy workflow controls remain available; the new release checks apply to the new Dispatch progression controls. Departure fields retain their existing local-time meaning; the header clock is UTC. Flight tracking remains manual.
+
+## Primary page completion
+
+Crew, Passengers, FBOs, Finance, Charter Market, Maintenance, and VIP Clients now have dedicated commercial-style screens. Crew mutations use the existing realism store with qualification, duty, rest, and assignment conflict validation. Passenger, handling, and finance forms save through the existing career functions and fields. Maintenance and client changes persist in the existing realism store. `node tests/crew-actions.test.cjs` verifies those store actions. Crew and client records retain the existing device-local storage behavior.

@@ -28,7 +28,7 @@
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html?v=20261013-exact2" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20261013-pages3" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -40,9 +40,10 @@ tabs.forEach(tab=>tab.addEventListener('click',()=>{
   frames.forEach(x=>x.classList.remove('active'));
   tab.classList.add('active');
   document.getElementById(tab.dataset.target).classList.add('active');
+  if(tab.dataset.target==='career'){document.querySelector('.topbar').style.display='none';document.querySelector('.shell').style.gridTemplateRows='1fr';}
 }));
 
-window.sxShowATC=()=>{document.getElementById('career').classList.remove('active');document.getElementById('atc').classList.add('active');document.querySelector('.topbar').style.display='flex';};
+window.sxShowATC=()=>{document.querySelector('.shell').style.gridTemplateRows='auto 1fr';document.getElementById('career').classList.remove('active');document.getElementById('atc').classList.add('active');document.querySelector('.topbar').style.display='flex';};
 const careerFrame=document.getElementById('career');
 careerFrame.addEventListener('load',()=>{
   try{
@@ -68,10 +69,10 @@ careerFrame.addEventListener('load',()=>{
       .then(()=>loadScript('opsWorkspacesScript','/ops-workspaces.js?v=20261004-ws3'))
       .then(()=>loadScript('dispatchPlanningGuardScript','/dispatch-planning-guard.js?v=20261010-v2'))
       .then(()=>loadScript('vipTripPlannerScript','/vip-trip-planner.js?v=20261010-v3'))
-      .then(()=>loadScript('realismSuiteScript','/realism-suite.js?v=20261010-v2'))
+      .then(()=>loadScript('realismSuiteScript','/realism-suite.js?v=20261013-pages3'))
       .then(()=>loadScript('realismDashboardUIScript','/realism-dashboard-ui.js?v=20261010-v1'))
       .then(()=>loadScript('fboLocatorScript','/fbo-locator.js?v=20261010-v1'))
-      .then(()=>loadScript('airlineStyleScript','/airline-style.js?v=20261013-exact2'));
+      .then(()=>loadScript('airlineStyleScript','/airline-style.js?v=20261013-pages3'));
   }catch(err){
     console.error('Could not install Sierra Career OS fixes',err);
   }
