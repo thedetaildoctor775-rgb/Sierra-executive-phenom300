@@ -302,7 +302,6 @@ function bindModeReset(){
     if(b.dataset.tab==='opsCenter'||b.dataset.sxOpsBound)return;
     b.dataset.sxOpsBound='1';
     b.addEventListener('click',(e)=>{
-      if(!e.isTrusted)return;
       sxUserNavigated=true;
       document.body.classList.remove('sx-ops-mode');
     });
@@ -317,12 +316,11 @@ function bindModeReset(){
 }
 function firstRun(){
   installStyles();installTab();installPanel();bindModeReset();polishHeader();render();
-  if(!sxUserNavigated)show();
+  if(!sxUserNavigated&&!window.sxAirlineStyle)show();
 }
 firstRun();
 [250,700,1400,2600,4200].forEach(ms=>setTimeout(()=>{if(!sxUserNavigated)firstRun()},ms));
 setInterval(()=>{
-  if(!sxUserNavigated && !$('opsCenter')?.classList.contains('active'))show();
   if($('opsCenter')?.classList.contains('active'))render();
 },2500);
 console.info('Sierra Executive Operations Center v2 active');

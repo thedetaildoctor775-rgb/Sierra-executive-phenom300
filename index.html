@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0B0B0B">
+<meta name="theme-color" content="#f4f7fa">
 <title>Sierra Executive</title>
 <style>
 :root{--bg:#0B0B0B;--panel:#111;--line:#24484c;--text:#fff;--muted:#9eb2b4;--accent:#2FE3F2;--accent2:#1BB6C4}
@@ -13,6 +13,8 @@
 .brand{min-width:max-content}.brand b{font-family:Georgia,serif;letter-spacing:.24em;color:var(--accent);font-size:18px}.brand span{display:block;color:var(--muted);font-size:9px;letter-spacing:.14em;margin-top:2px}.tabs{display:flex;gap:7px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{border:1px solid var(--line);background:#101010;color:var(--muted);padding:9px 13px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer}.tab.active{color:var(--accent);border-color:#28727b;background:#0d191a;box-shadow:inset 0 -2px 0 var(--accent)}
 .framewrap{min-height:0;background:#000}.frame{display:none;width:100%;height:100%;border:0;background:#000}.frame.active{display:block}
 @media(max-width:700px){.topbar{display:block;padding:8px}.brand{display:none}.tabs{width:100%}.tab{padding:9px 11px;font-size:11px}}
+
+.topbar{background:#fff;border-color:#dce7eb;padding:6px 12px}.brand{display:none}.tabs{margin-left:auto}.tab{background:#f4f7fa;color:#557984;border-color:#dce7eb;font-size:11px;padding:7px 11px}.tab.active{background:#e7f5f6;color:#087e8b;border-color:#a5d7dc;box-shadow:none}
 </style>
 </head>
 <body>
@@ -20,7 +22,7 @@
   <div class="topbar">
     <div class="brand"><b>SIERRA</b><span>EXECUTIVE • OPERATIONS</span></div>
     <div class="tabs">
-      <button class="tab active" data-target="career">Career OS</button>
+      <button class="tab active" data-target="career">Charter OS</button>
       <button class="tab" data-target="atc">ATC</button>
     </div>
   </div>
@@ -66,7 +68,8 @@ careerFrame.addEventListener('load',()=>{
       .then(()=>loadScript('vipTripPlannerScript','/vip-trip-planner.js?v=20261010-v3'))
       .then(()=>loadScript('realismSuiteScript','/realism-suite.js?v=20261010-v2'))
       .then(()=>loadScript('realismDashboardUIScript','/realism-dashboard-ui.js?v=20261010-v1'))
-      .then(()=>loadScript('fboLocatorScript','/fbo-locator.js?v=20261010-v1'));
+      .then(()=>loadScript('fboLocatorScript','/fbo-locator.js?v=20261010-v1'))
+      .then(()=>loadScript('airlineStyleScript','/airline-style.js?v=20261013-v1'));
   }catch(err){
     console.error('Could not install Sierra Career OS fixes',err);
   }
