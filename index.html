@@ -15,6 +15,7 @@
 @media(max-width:700px){.topbar{display:block;padding:8px}.brand{display:none}.tabs{width:100%}.tab{padding:9px 11px;font-size:11px}}
 
 .topbar{background:#fff;border-color:#dce7eb;padding:6px 12px}.brand{display:none}.tabs{margin-left:auto}.tab{background:#f4f7fa;color:#557984;border-color:#dce7eb;font-size:11px;padding:7px 11px}.tab.active{background:#e7f5f6;color:#087e8b;border-color:#a5d7dc;box-shadow:none}
+.shell{grid-template-rows:1fr}.topbar{display:none}.framewrap,.frame{background:#f4f7fa}
 </style>
 </head>
 <body>
@@ -27,7 +28,7 @@
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html?v=20261010-simbrief-aircraft-fix1" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20261013-exact2" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -41,6 +42,7 @@ tabs.forEach(tab=>tab.addEventListener('click',()=>{
   document.getElementById(tab.dataset.target).classList.add('active');
 }));
 
+window.sxShowATC=()=>{document.getElementById('career').classList.remove('active');document.getElementById('atc').classList.add('active');document.querySelector('.topbar').style.display='flex';};
 const careerFrame=document.getElementById('career');
 careerFrame.addEventListener('load',()=>{
   try{
@@ -69,7 +71,7 @@ careerFrame.addEventListener('load',()=>{
       .then(()=>loadScript('realismSuiteScript','/realism-suite.js?v=20261010-v2'))
       .then(()=>loadScript('realismDashboardUIScript','/realism-dashboard-ui.js?v=20261010-v1'))
       .then(()=>loadScript('fboLocatorScript','/fbo-locator.js?v=20261010-v1'))
-      .then(()=>loadScript('airlineStyleScript','/airline-style.js?v=20261013-v1'));
+      .then(()=>loadScript('airlineStyleScript','/airline-style.js?v=20261013-exact2'));
   }catch(err){
     console.error('Could not install Sierra Career OS fixes',err);
   }

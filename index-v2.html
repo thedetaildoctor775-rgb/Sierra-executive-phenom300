@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0B0B0B">
+<meta name="theme-color" content="#f4f7fa">
 <title>Sierra Executive</title>
 <style>
 :root{--bg:#0B0B0B;--panel:#111;--line:#24484c;--text:#fff;--muted:#9eb2b4;--accent:#2FE3F2;--accent2:#1BB6C4}
@@ -13,6 +13,9 @@
 .brand{min-width:max-content}.brand b{font-family:Georgia,serif;letter-spacing:.24em;color:var(--accent);font-size:18px}.brand span{display:block;color:var(--muted);font-size:9px;letter-spacing:.14em;margin-top:2px}.tabs{display:flex;gap:7px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}.tab{border:1px solid var(--line);background:#101010;color:var(--muted);padding:9px 13px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer}.tab.active{color:var(--accent);border-color:#28727b;background:#0d191a;box-shadow:inset 0 -2px 0 var(--accent)}
 .framewrap{min-height:0;background:#000}.frame{display:none;width:100%;height:100%;border:0;background:#000}.frame.active{display:block}
 @media(max-width:700px){.topbar{display:block;padding:8px}.brand{display:none}.tabs{width:100%}.tab{padding:9px 11px;font-size:11px}}
+
+.topbar{background:#fff;border-color:#dce7eb;padding:6px 12px}.brand{display:none}.tabs{margin-left:auto}.tab{background:#f4f7fa;color:#557984;border-color:#dce7eb;font-size:11px;padding:7px 11px}.tab.active{background:#e7f5f6;color:#087e8b;border-color:#a5d7dc;box-shadow:none}
+.shell{grid-template-rows:1fr}.topbar{display:none}.framewrap,.frame{background:#f4f7fa}
 </style>
 </head>
 <body>
@@ -20,12 +23,12 @@
   <div class="topbar">
     <div class="brand"><b>SIERRA</b><span>EXECUTIVE • OPERATIONS</span></div>
     <div class="tabs">
-      <button class="tab active" data-target="career">Career OS</button>
+      <button class="tab active" data-target="career">Charter OS</button>
       <button class="tab" data-target="atc">ATC</button>
     </div>
   </div>
   <div class="framewrap">
-    <iframe id="career" class="frame active" src="/legacy.html" title="Sierra Executive Career OS"></iframe>
+    <iframe id="career" class="frame active" src="/legacy.html?v=20261013-exact2" title="Sierra Executive Career OS"></iframe>
     <iframe id="atc" class="frame" src="/atc.html" title="Sierra ATC"></iframe>
   </div>
 </div>
@@ -38,6 +41,41 @@ tabs.forEach(tab=>tab.addEventListener('click',()=>{
   tab.classList.add('active');
   document.getElementById(tab.dataset.target).classList.add('active');
 }));
+
+window.sxShowATC=()=>{document.getElementById('career').classList.remove('active');document.getElementById('atc').classList.add('active');document.querySelector('.topbar').style.display='flex';};
+const careerFrame=document.getElementById('career');
+careerFrame.addEventListener('load',()=>{
+  try{
+    const doc=careerFrame.contentDocument;
+    if(!doc)return;
+    const loadScript=(id,src)=>new Promise(resolve=>{
+      if(doc.getElementById(id)){resolve();return;}
+      const s=doc.createElement('script');
+      s.id=id;s.src=src;s.onload=()=>resolve();s.onerror=()=>resolve();
+      doc.body.appendChild(s);
+    });
+    loadScript('fleetSyncFixScript','/fleet-sync-fix.js?v=20261010-longitude1')
+      .then(()=>loadScript('perAircraftLocationFixScript','/per-aircraft-location-fix.js?v=20261010-loc5'))
+      .then(()=>loadScript('homeBaseFixScript','/home-base-fix.js?v=20260823-kmev4'))
+      .then(()=>loadScript('availabilityBannerFixScript','/availability-banner-fix.js?v=20260821-1'))
+      .then(()=>loadScript('fboAutoPricingScript','/fbo-auto-pricing.js?v=20260823-fbo2'))
+      .then(()=>loadScript('tripDossierScript','/trip-dossier.js?v=20260823-dossier1'))
+      .then(()=>loadScript('opsDashboardStyleScript','/ops-dashboard-style.js?v=20261004-ops2'))
+      .then(()=>loadScript('dispatchPhoneScript','/dispatch-phone.js?v=20261004-phone2'))
+      .then(()=>loadScript('westCoastMarketScript','/market-boost.js?v=20261010-scenic6'))
+      .then(()=>loadScript('flightAutomationScript','/flight-automation.js?v=20261004-auto2'))
+      .then(()=>loadScript('opsCenterScript','/ops-center.js?v=20261004-ops5'))
+      .then(()=>loadScript('opsWorkspacesScript','/ops-workspaces.js?v=20261004-ws3'))
+      .then(()=>loadScript('dispatchPlanningGuardScript','/dispatch-planning-guard.js?v=20261010-v2'))
+      .then(()=>loadScript('vipTripPlannerScript','/vip-trip-planner.js?v=20261010-v3'))
+      .then(()=>loadScript('realismSuiteScript','/realism-suite.js?v=20261010-v2'))
+      .then(()=>loadScript('realismDashboardUIScript','/realism-dashboard-ui.js?v=20261010-v1'))
+      .then(()=>loadScript('fboLocatorScript','/fbo-locator.js?v=20261010-v1'))
+      .then(()=>loadScript('airlineStyleScript','/airline-style.js?v=20261013-exact2'));
+  }catch(err){
+    console.error('Could not install Sierra Career OS fixes',err);
+  }
+});
 </script>
 </body>
 </html>
