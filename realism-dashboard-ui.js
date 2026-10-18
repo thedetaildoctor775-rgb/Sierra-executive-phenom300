@@ -45,7 +45,7 @@ function decorate(){
  stats.className='sxStatGrid';
  const s=typeof state!=='undefined'?state:{},fleet=s.fleet||{},active=s.activeAssignment;
  const count=Object.values(fleet).filter(a=>a.status==='Available').length;
- stats.innerHTML='<div class="sxStat">Fleet aircraft<strong>3</strong></div><div class="sxStat">Available reported<strong>'+count+'</strong></div><div class="sxStat">Active charter<strong>'+(active?String(active.flight).replace(/[^A-Z0-9]/gi,''):'None')+'</strong></div><div class="sxStat">Home base<strong>KMEV</strong></div>';
+ stats.innerHTML='<div class="sxStat">Fleet aircraft<strong>'+Object.keys(fleet).length+'</strong></div><div class="sxStat">Available reported<strong>'+count+'</strong></div><div class="sxStat">Active charter<strong>'+(active?String(active.flight).replace(/[^A-Z0-9]/gi,''):'None')+'</strong></div><div class="sxStat">Home base<strong>KMEV</strong></div>';
  nav.insertAdjacentElement('afterend',stats);
  nav.querySelectorAll('[data-sx-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.sxTab;decorate()});
 }
