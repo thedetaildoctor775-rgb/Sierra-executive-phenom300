@@ -78,6 +78,7 @@ function installPanel(){
  const sec=document.createElement('section');sec.id='tripDossier';sec.className='panel';main.appendChild(sec);
 }
 function showDossier(){
+ document.body.classList.remove('sx-airline-panel','sx-ops-mode');
  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
  document.querySelectorAll('nav.tabs .tab').forEach(b=>b.classList.remove('active'));
  $('tripDossier')?.classList.add('active');document.querySelector('[data-tab="tripDossier"]')?.classList.add('active');
@@ -174,6 +175,7 @@ if(typeof closeFlight==='function'){
  const oldClose=closeFlight;closeFlight=async function(...args){const d=ensureDossier(),active=d.legs[d.activeLeg],result=await oldClose.apply(this,args);if(active){active.status='completed';const next=d.legs.findIndex((x,i)=>i>d.activeLeg&&!completed(x));if(next>=0)d.activeLeg=next;persist();}return result;};
 }
 
+window.sxOpenTripDossier=showDossier;
 injectStyles();installTab();installPanel();ensureDossier();persist();
 setTimeout(()=>{installTab();installPanel();},400);
 console.info('Sierra Trip Dossier v1 active');
