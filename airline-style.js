@@ -80,18 +80,11 @@ function marketHTML(){
 function clientsHTML(){return title('VIP Clients','Client preferences and repeat charter history.')+formNotice()+`<div class="sx-air-cards">${(sim().clients||[]).map(c=>`<section class="sx-air-card sx-air-inner"><h3>${esc(c.name)}</h3><p>${esc(c.preferences||'No preferences recorded')}</p><div class="sx-air-data">${datum('Completed trips',String(c.completed||0))}${datum('Charter spend',money(c.spend))}</div></section>`).join('')}</div><section class="sx-air-card" style="margin-top:24px"><div class="sx-air-head"><h3>Save client preferences</h3></div><form id="sxModernClient" class="sx-air-inner"><div class="formGrid"><label>Client / company<input name="name" required></label><label>Preferences and requests<input name="preferences"></label></div><button class="btn">Save client</button></form></section>`}
 function maintenanceHTML(){const r=sim();return title('Maintenance','Inspection milestones, defects, and simulated releases.')+formNotice()+`<div class="sx-air-cards">${Object.values(data().fleet||{}).map(a=>{const m=r.maintenance?.[a.tail]||{lastInspectionHours:0,inspectionEvery:100,defects:[]},due=Number(m.lastInspectionHours)+Number(m.inspectionEvery||100);return `<section class="sx-air-card"><div class="sx-air-head"><h3>${esc(a.tail)}</h3>${badge(m.grounded||(m.defects||[]).some(d=>!d.cleared)||Number(a.hours||0)>=due?'Maintenance hold':'Available')}</div><div class="sx-air-inner"><div class="sx-air-data">${datum('Logged hours',Number(a.hours||0).toFixed(1))}${datum('Inspection due',due.toFixed(1)+' h')}</div>${(m.defects||[]).filter(d=>!d.cleared).map(d=>`<div class="notice">${esc(d.note)}</div>`).join('')}<form data-defect="${esc(a.tail)}"><label>Record a defect<input name="note" required></label><button class="btn secondary">Add defect & hold aircraft</button></form><div class="buttons"><button class="btn secondary" data-maint="inspect" data-tail="${esc(a.tail)}">Record inspection</button><button class="btn secondary" data-maint="release" data-tail="${esc(a.tail)}">Clear defects / release</button></div></div></section>`}).join('')}</div><p>Maintenance records and releases are simulation actions.</p>`}
 function readiness(){
- const s=data(),a=assignment(),sb=s.simbrief,r=sim(),f=s.fleet?.[tail()],problems=[];
+ const s=data(),a=assignment(),sb=s.simbrief,f=s.fleet?.[tail()],problems=[];
  if(!live())return ['Accept or activate a charter first'];
  if(!f)problems.push('Assigned aircraft is missing');
- if(!window.sxRealismSuite?.canDispatch?.(tail()))problems.push('Aircraft maintenance or crew availability check is not clear');
- const crew=(r.crew||[]).find(c=>c.id===r.assignments?.[tail()]);
- if(!crew)problems.push('Assign a qualified crew');
- else {
-   if(!String(crew.types||'').split(/[,\s]+/).map(t=>t.toUpperCase()).includes(String(f?.model||'').toUpperCase()))problems.push('Crew aircraft qualification does not match');
-   if(Number(crew.dutyHours)>=12)problems.push('Crew duty limit reached (12-hour simulation policy)');
-   if(Date.parse(crew.restUntil)>Date.now())problems.push('Crew rest is incomplete');
- }
- if(!sb?.importedAt||sb.origin!==a.origin||sb.destination!==(a.dest||a.destination))problems.push('Import a matching SimBrief route');
+ if(!window.sxRealismSuite?.canDispatch?.(tail()))problems.push('Aircraft is on a maintenance hold');
+  if(!sb?.importedAt||sb.origin!==a.origin||sb.destination!==(a.dest||a.destination))problems.push('Import a matching SimBrief route');
  if(!sb?.aircraft||String(sb.aircraft).toUpperCase()!==String(f?.model||'').toUpperCase())problems.push('SimBrief aircraft type does not match');
  if(sb?.registration&&sb.registration!==tail())problems.push('SimBrief registration does not match');
  if(!(Number(input('blockFuel'))>0)||!input('route'))problems.push('Planned route and block fuel are required');
