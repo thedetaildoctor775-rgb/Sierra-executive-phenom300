@@ -2214,8 +2214,8 @@ async function step(s){
    scheduleCloudSave();
  }
 }
-function resetFlight(){
- if(!confirm('Reset current flight workflow? Career totals will not be erased.'))return;
+function resetFlight(skipConfirmation=false){
+ if(!skipConfirmation&&!confirm('Reset current flight workflow? Career totals will not be erased.'))return;
  reconcileFleet130();
  const tail=state.activeAircraft||state.activeAssignment?.aircraft;
  if(tail&&state.fleet[tail])state.fleet[tail].status='Available';
