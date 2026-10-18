@@ -3,13 +3,27 @@
 
 const HOME_BASE='KMEV';
 const DEFAULT_FLEET={
-  N88SX:{tail:'N88SX',type:'Cessna Citation X',model:'C750',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'High-speed / long-range executive charter'},
+  N102LJ:{tail:'N102LJ',type:'Cessna Citation X',model:'C750',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'High-speed / long-range executive charter'},
   N750SX:{tail:'N750SX',type:'Cessna Citation Longitude',model:'C700',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Super-midsize / long-range executive charter'},
   N800SX:{tail:'N800SX',type:'Hawker Beechcraft 800XP',model:'H25B',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter',callsign:'SIERRA EXECUTIVE',flightNumber:'SXR135'}
 };
 const ALLOWED_FLEET=new Set(Object.keys(DEFAULT_FLEET));
 
 function ensureFleetFixed(){
+  // One-time tail-number migration; retain all aircraft and active charter data.
+  if(state?.fleet?.N88SX){
+    const old=state.fleet.N88SX;
+    state.fleet.N102LJ={...old,...(state.fleet.N102LJ||{}),tail:'N102LJ'};
+    delete state.fleet.N88SX;
+  }
+  if(state.selectedAircraft==='N88SX')state.selectedAircraft='N102LJ';
+  if(state.activeAircraft==='N88SX')state.activeAircraft='N102LJ';
+  if(state.activeAssignment?.aircraft==='N88SX')state.activeAssignment.aircraft='N102LJ';
+  if(state.flightPackage?.aircraft==='N88SX')state.flightPackage.aircraft='N102LJ';
+  if(Array.isArray(state.tripDossier?.legs))state.tripDossier.legs.forEach(leg=>{if(leg.aircraft==='N88SX')leg.aircraft='N102LJ';});
+  if(Array.isArray(state.marketBoard))state.marketBoard.forEach(a=>{if(a.aircraft==='N88SX')a.aircraft='N102LJ';});
+  if(Array.isArray(state.protectedOffers))state.protectedOffers.forEach(a=>{if(a.aircraft==='N88SX')a.aircraft='N102LJ';});
+
   state.fleet=state.fleet||{};
   for(const tail of Object.keys(state.fleet)){
     if(!ALLOWED_FLEET.has(tail)) delete state.fleet[tail];
@@ -32,7 +46,7 @@ function ensureFleetFixed(){
   }
   state.homeBase=HOME_BASE;
   state.operatorHomeBase=HOME_BASE;
-  if(!state.selectedAircraft||!state.fleet[state.selectedAircraft]) state.selectedAircraft='N88SX';
+  if(!state.selectedAircraft||!state.fleet[state.selectedAircraft]) state.selectedAircraft='N102LJ';
   if(state.activeAircraft&&!state.fleet[state.activeAircraft]) state.activeAircraft=state.selectedAircraft;
   return state.fleet;
 }
@@ -56,12 +70,12 @@ function activeTail(){
   if(state.selectedAircraft&&state.fleet[state.selectedAircraft]) return state.selectedAircraft;
   const assignmentTail=state.activeAssignment?.aircraft;
   if(assignmentTail&&state.fleet[assignmentTail]) return assignmentTail;
-  return 'N88SX';
+  return 'N102LJ';
 }
 
 function selectedAircraftFixed(){
   ensureFleetFixed();
-  return state.fleet[activeTail()]||state.fleet.N88SX;
+  return state.fleet[activeTail()]||state.fleet.N102LJ;
 }
 
 function enforceLocationFromWorkflow(tail){
