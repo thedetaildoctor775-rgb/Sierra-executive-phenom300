@@ -132,7 +132,7 @@ function loadN102Replay(){
    state.tripDossierArchive=Array.isArray(state.tripDossierArchive)?state.tripDossierArchive:[];
    state.tripDossierArchive.push(JSON.parse(JSON.stringify(state.tripDossier)));
  }
- const base={date:'2026-10-18',timeZone:'America/Los_Angeles',pax:0,bags:0,revenue:0,aircraft:'N88SX',callsign:'N102LJ',status:'pending',client:'Flight schedule replay'};
+ const base={date:'2026-10-18',timeZone:'America/Los_Angeles',pax:0,bags:0,revenue:0,aircraft:'N102LJ',callsign:'N102LJ',status:'pending',client:'Flight schedule replay'};
  state.tripDossier={
    id:'N102LJ-20261018',client:'N102LJ Schedule Replay',title:'Citation X • Real Flight Replay',activeLeg:0,
    overview:'Actual N102LJ is a Learjet 60. This replays its October 18 schedule in a Citation X (C750). Both times are PDT. Set MSFS simulation date/time to October 18, 2026 at 06:40 PDT whenever you want to fly; the real clock does not matter. Real-world passenger counts and financials are unknown, so those fields start at zero. Schedule targets may differ in a Citation X.',
