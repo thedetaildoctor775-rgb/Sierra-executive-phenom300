@@ -136,9 +136,9 @@ function loadN102Replay(){
  const base={date:'2026-10-18',timeZone:'America/Los_Angeles',pax:0,bags:0,revenue:0,aircraft:'N102LJ',callsign:'N102LJ',status:'pending',client:'Flight schedule replay'};
  state.tripDossier={
    id:'N102LJ-20261018',client:'N102LJ Schedule Replay',title:'Citation X • Real Flight Replay',activeLeg:0,
-   overview:'Actual N102LJ is a Learjet 60. This replays its October 18 schedule in a Citation X (C750). Both times are PDT. Set MSFS simulation date/time to October 18, 2026 at 06:40 PDT whenever you want to fly; the real clock does not matter. Real-world passenger counts and financials are unknown, so those fields start at zero. Schedule targets may differ in a Citation X.',
+   overview:'Actual N102LJ is a Learjet 60. This replays its October 18 schedule in a Citation X (C750). Both times are PDT. Set MSFS simulation date/time to October 18, 2026 at 06:40 PDT whenever you want to fly; the real clock does not matter. Real-world passenger counts and financials are unknown, so those fields start at zero. Outbound published plan: MINDN3 VIKES FRA REBRG IRNMN2, FL410, 503 mph (about 437 kt), 444 statute miles (about 386 NM), 61 minutes. These are Learjet 60 planning figures. SimBrief must calculate Citation X fuel and performance; schedule targets may differ.',
    legs:[
-     {...base,id:'N102LJ-1',origin:'KMEV',destination:'KLAX',departure:'06:55',arrival:'07:56',mission:'Outbound schedule replay'},
+     {...base,id:'N102LJ-1',origin:'KMEV',destination:'KLAX',departure:'06:55',arrival:'07:56',route:'MINDN3 VIKES FRA REBRG IRNMN2',cruiseAltitudeFt:41000,plannedSpeedKts:437,plannedDurationMinutes:61,plannedDistanceNm:386,mission:'Outbound schedule replay'},
      {...base,id:'N102LJ-2',origin:'KLAX',destination:'KMEV',departure:'08:35',arrival:'09:25',mission:'Return schedule replay'}
    ]
  };
@@ -164,8 +164,8 @@ function openLeg(i){
  const d=ensureDossier(),l=d.legs[i];if(!l)return;
  d.activeLeg=i;
  state.selectedAircraft=l.aircraft||state.selectedAircraft||state.activeAircraft;
- setField('flightId',l.id);if(l.callsign)setField('callsign',l.callsign);setField('origin',l.origin);setField('destination',l.destination);setField('depDate',l.date);setField('depTime',l.departure);setField('paxCount',l.pax);setField('bags',l.bags);setField('revenue',l.revenue);setField('mission',l.mission||d.title);setField('clientName',l.client||d.client);
- state.activeAssignment={...(state.activeAssignment||{}),id:l.id,origin:l.origin,destination:l.destination,date:l.date,depTime:l.departure,pax:l.pax,bags:l.bags,revenue:l.revenue,aircraft:l.aircraft||state.selectedAircraft,mission:l.mission||d.title,client:l.client||d.client};
+ setField('flightId',l.id);if(l.route)setField('route',l.route);if(l.cruiseAltitudeFt)setField('cruiseAltitude',l.cruiseAltitudeFt);if(l.callsign)setField('callsign',l.callsign);setField('origin',l.origin);setField('destination',l.destination);setField('depDate',l.date);setField('depTime',l.departure);setField('paxCount',l.pax);setField('bags',l.bags);setField('revenue',l.revenue);setField('mission',l.mission||d.title);setField('clientName',l.client||d.client);
+ state.activeAssignment={...(state.activeAssignment||{}),id:l.id,origin:l.origin,destination:l.destination,date:l.date,depTime:l.departure,pax:l.pax,bags:l.bags,revenue:l.revenue,aircraft:l.aircraft||state.selectedAircraft,mission:l.mission||d.title,client:l.client||d.client,route:l.route||'',cruiseAltitudeFt:l.cruiseAltitudeFt||null,plannedSpeedKts:l.plannedSpeedKts||null,plannedDurationMinutes:l.plannedDurationMinutes||null};
  persist();try{if(typeof saveAll==='function')saveAll();else if(typeof sync==='function')sync();}catch(e){}
  const btn=document.querySelector('[data-tab="dispatch"]');if(btn)btn.click();
 }
