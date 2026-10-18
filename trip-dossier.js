@@ -109,17 +109,40 @@ function render(){
   <div class="td-overview"><div id="tdOverviewText">${esc(d.overview)}</div><div class="td-edit" id="tdEdit"><textarea id="tdOverviewInput">${esc(d.overview)}</textarea><div style="margin-top:8px"><button class="btn" id="tdSaveOverview">Save Brief</button></div></div></div>
   <div class="td-stats"><div class="td-stat"><span>Legs</span><b>${t.completed}/${d.legs.length} complete</b></div><div class="td-stat"><span>Trip revenue</span><b>${money(t.revenue)}</b></div><div class="td-stat"><span>Passenger legs</span><b>${t.pax}</b></div><div class="td-stat"><span>Baggage</span><b>${Math.round(t.bags)} lb</b></div></div>
   <div class="td-list">${d.legs.length?d.legs.map((l,i)=>`<div class="td-leg ${i===d.activeLeg?'active':''} ${completed(l)?'done':''}" data-leg="${i}"><div class="td-num">${i+1}</div><div><div class="td-route2">${esc(l.origin)} → ${esc(l.destination)}</div><div class="td-meta">${esc(l.date||'Date TBD')} ${esc(l.departure||'')} • ${Number(l.pax)||0} PAX • ${Math.round(Number(l.bags)||0)} lb bags • ${esc(l.aircraft||'Aircraft TBD')}</div></div><div><div class="td-money">${money(l.revenue)}</div><div class="td-status">${esc(completed(l)?'Completed':i===d.activeLeg?'Active Leg':l.status||'Pending')}</div></div></div>`).join(''):'<div class="td-empty">No legs in this trip yet.</div>'}</div>
-  <div class="td-actions"><button class="btn" id="tdDispatch">Open Active Leg in Dispatch</button><button class="btn secondary" id="tdAdd">Add Leg</button><button class="btn secondary" id="tdComplete">Complete Active Leg</button><button class="btn secondary" id="tdBrief">Edit Trip Brief</button></div>
+  <div class="td-actions"><button class="btn" id="tdDispatch">Open Active Leg in Dispatch</button><button class="btn secondary" id="tdReplayN102">Load N102LJ Replay</button><button class="btn secondary" id="tdAdd">Add Leg</button><button class="btn secondary" id="tdComplete">Complete Active Leg</button><button class="btn secondary" id="tdBrief">Edit Trip Brief</button></div>
  </div>${renderMap(d)}</div>`;
  bind(d);
 }
 function bind(d){
  $('tdDispatch')?.addEventListener('click',()=>openLeg(d.activeLeg));
  $('tdAdd')?.addEventListener('click',addLeg);
+ $('tdReplayN102')?.addEventListener('click',loadN102Replay);
  $('tdComplete')?.addEventListener('click',completeActive);
  $('tdBrief')?.addEventListener('click',()=>{$('tdEdit')?.classList.toggle('open');$('tdOverviewText').style.display=$('tdEdit')?.classList.contains('open')?'none':'block';});
  $('tdSaveOverview')?.addEventListener('click',()=>{d.overview=$('tdOverviewInput')?.value||'';persist();render();});
  document.querySelectorAll('.td-leg').forEach(x=>x.addEventListener('click',()=>{d.activeLeg=Number(x.dataset.leg)||0;persist();render();}));
+}
+function loadN102Replay(){
+ const workflow=String(state?.workflow||'').toLowerCase();
+ if(['accepted','duty','fuel','boarded','ready','departed','landed','parked'].includes(workflow)){
+   alert('Close the active charter first. Nothing was changed.');return;
+ }
+ if(!confirm('Load the real N102LJ schedule for Oct 18 as a Citation X simulation? Previous Trip Dossier will be archived.'))return;
+ if(state.tripDossier?.legs?.length){
+   state.tripDossierArchive=Array.isArray(state.tripDossierArchive)?state.tripDossierArchive:[];
+   state.tripDossierArchive.push(JSON.parse(JSON.stringify(state.tripDossier)));
+ }
+ const base={date:'2026-10-18',timeZone:'America/Los_Angeles',pax:0,bags:0,revenue:0,aircraft:'N88SX',callsign:'N102LJ',status:'pending',client:'Flight schedule replay'};
+ state.tripDossier={
+   id:'N102LJ-20261018',client:'N102LJ Schedule Replay',title:'Citation X • Real Flight Replay',activeLeg:0,
+   overview:'Actual N102LJ is a Learjet 60. This replays its October 18 schedule in a Citation X (C750). Both times are PDT. Set MSFS simulation date/time to October 18, 2026 at 06:40 PDT whenever you want to fly; the real clock does not matter. Real-world passenger counts and financials are unknown, so those fields start at zero. Schedule targets may differ in a Citation X.',
+   legs:[
+     {...base,id:'N102LJ-1',origin:'KMEV',destination:'KLAX',departure:'06:55',arrival:'07:56',mission:'Outbound schedule replay'},
+     {...base,id:'N102LJ-2',origin:'KLAX',destination:'KMEV',departure:'08:35',arrival:'09:25',mission:'Return schedule replay'}
+   ]
+ };
+ persist();render();
+ alert('Two replay legs loaded. Select the first leg and tap Open Active Leg in Dispatch. In MSFS set October 18, 06:40 PDT to start now.');
 }
 function addLeg(){
  const d=ensureDossier();const prev=d.legs[d.legs.length-1];
@@ -140,7 +163,7 @@ function openLeg(i){
  const d=ensureDossier(),l=d.legs[i];if(!l)return;
  d.activeLeg=i;
  state.selectedAircraft=l.aircraft||state.selectedAircraft||state.activeAircraft;
- setField('flightId',l.id);setField('origin',l.origin);setField('destination',l.destination);setField('depDate',l.date);setField('depTime',l.departure);setField('paxCount',l.pax);setField('bags',l.bags);setField('revenue',l.revenue);setField('mission',l.mission||d.title);setField('clientName',l.client||d.client);
+ setField('flightId',l.id);if(l.callsign)setField('callsign',l.callsign);setField('origin',l.origin);setField('destination',l.destination);setField('depDate',l.date);setField('depTime',l.departure);setField('paxCount',l.pax);setField('bags',l.bags);setField('revenue',l.revenue);setField('mission',l.mission||d.title);setField('clientName',l.client||d.client);
  state.activeAssignment={...(state.activeAssignment||{}),id:l.id,origin:l.origin,destination:l.destination,date:l.date,depTime:l.departure,pax:l.pax,bags:l.bags,revenue:l.revenue,aircraft:l.aircraft||state.selectedAircraft,mission:l.mission||d.title,client:l.client||d.client};
  persist();try{if(typeof saveAll==='function')saveAll();else if(typeof sync==='function')sync();}catch(e){}
  const btn=document.querySelector('[data-tab="dispatch"]');if(btn)btn.click();
