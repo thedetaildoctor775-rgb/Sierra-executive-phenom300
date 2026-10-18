@@ -137,7 +137,7 @@ function bind(root){
    if(action==='schedule'){native('market');if(typeof openCharterEditor==='function')openCharterEditor();return}
    if(action==='dispatch')return open('airlineDispatch');
    if(action==='market')return native('market');
-   if(action==='trip')return native('tripDossier');
+   if(action==='trip')return typeof window.sxOpenTripDossier==='function'?window.sxOpenTripDossier():native('tripDossier');
    if(action==='flights')return open('airlineSchedule');
    if(action==='backup'||action==='duty'||action==='log'||action==='invoice')return native(action);
    if(action==='signin')return typeof openAuth==='function'&&openAuth();
@@ -182,7 +182,7 @@ function bind(root){
  root.querySelectorAll('[data-maint]').forEach(b=>b.onclick=()=>{try{sxRealismSuite.maintenance(b.dataset.tail,b.dataset.maint);message='Simulated maintenance record saved.';render(true)}catch(err){message=err.message;render(true)}});
  root.querySelectorAll('[data-next]').forEach(b=>b.onclick=()=>progress(b.dataset.next));
  const list=rows().filter(r=>filter==='All flights'||r.status===filter);
- root.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>{const r=list[Number(b.dataset.row)];if(r.active)open('airlineDispatch');else native(r.completed?'log':'tripDossier')});
+ root.querySelectorAll('[data-row]').forEach(b=>b.onclick=()=>{const r=list[Number(b.dataset.row)];if(r.active)open('airlineDispatch');else (r.completed?native('log'):(typeof window.sxOpenTripDossier==='function'?window.sxOpenTripDossier():native('tripDossier')))});
  root.querySelectorAll('[data-aircraft]').forEach(b=>b.onclick=()=>{selectAircraft(b.dataset.aircraft);render(true)});
 }
 function render(force=false){
