@@ -142,8 +142,8 @@ function bind(root){
      busy=true;
      try{
        if(typeof resetFlight!=='function')throw Error('Cancellation workflow unavailable.');
-       // Existing reset routine asks for a second confirmation. Keep its location and fleet repair behavior.
-       resetFlight();
+       // Existing reset routine retains location and fleet repair behavior.
+       resetFlight(true);
        if(s.activeAssignment)throw Error('Cancellation was not confirmed; the assignment remains active.');
        s.cancelledTrips=Array.isArray(s.cancelledTrips)?s.cancelledTrips:[];
        if(!s.cancelledTrips.some(x=>x.flight===fid))s.cancelledTrips.unshift({flight:fid,aircraft,origin:a?.origin,destination:a?.dest||a?.destination,client:a?.client,status:'Cancelled',cancelledAt:new Date().toISOString()});
