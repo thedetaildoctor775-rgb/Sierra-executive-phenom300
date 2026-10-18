@@ -120,8 +120,10 @@ function ground(ws='ground'){native('opsCenter');window.sxOpsWorkspaces?.open?.(
 function prepare(){
  const a=assignment(),f=data().fleet?.[tail()];if(!live()||!f)return;
  const d=new Date((a.departureDate||a.date||input('depDate'))+'T'+(a.departureTime||a.depTime||input('depTime')||'12:00'));
- const params=new URLSearchParams({airline:'SXR',fltnum:flight().replace(/^SXR/i,''),type:f.model||'',orig:a.origin,dest:a.dest||a.destination,reg:tail(),pax:String(a.pax??input('paxCount')),cargo:String(Number(a.bags??input('bags'))/1000),units:'LBS'});
- if(!Number.isNaN(d.getTime())){params.set('date',d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit',timeZone:'UTC'}).replaceAll(' ','').toUpperCase());params.set('deph',String(d.getUTCHours()));params.set('depm',String(d.getUTCMinutes()))}
+ const replay=String(a.id||a.flight||'').startsWith('N102LJ-') && a.route;
+ const params=new URLSearchParams({airline:replay?'':'SXR',fltnum:replay?'':flight().replace(/^SXR/i,''),type:f.model||'',orig:a.origin,dest:a.dest||a.destination,reg:tail(),pax:String(a.pax??input('paxCount')),cargo:String(Number(a.bags??input('bags'))/1000),units:'LBS'});
+ if(replay){params.set('route',a.route);params.set('fl',String(Math.round(Number(a.cruiseAltitudeFt||41000)/100)));params.set('deph','13');params.set('depm','55');params.set('date','18OCT26');}
+ if(!replay&&!Number.isNaN(d.getTime())){params.set('date',d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit',timeZone:'UTC'}).replaceAll(' ','').toUpperCase());params.set('deph',String(d.getUTCHours()));params.set('depm',String(d.getUTCMinutes()))}
  window.open('https://dispatch.simbrief.com/options/custom?'+params,'_blank','noopener,noreferrer');
 }
 async function progress(next){
