@@ -1,10 +1,13 @@
 (()=>{
 'use strict';
 if(window.__sxRealismSuite)return;window.__sxRealismSuite=true;
-const KEY='sx_realism_suite_v1',TAILS=['N88SX','N750SX','N800SX'];
+const KEY='sx_realism_suite_v1',TAILS=['N102LJ'];
 const defaults=()=>({crew:[],assignments:{},maintenance:{},clients:[],events:[],finance:{},reputation:75,processed:[],history:[],rates:{flightHour:3900,fuelHour:900,crewHour:300,maintenanceHour:550,handlingLeg:350,repositionHour:2400},dispatch:{}});
 const load=()=>{try{const d=JSON.parse(localStorage.getItem(KEY)||'{}');return {...defaults(),...d}}catch{return defaults()}};
 let data=load();
+// Migrate historical Citation X crew assignment and maintenance from the former tail.
+if(data.assignments.N88SX&&!data.assignments.N102LJ)data.assignments.N102LJ=data.assignments.N88SX;
+if(data.maintenance.N88SX&&!data.maintenance.N102LJ)data.maintenance.N102LJ=data.maintenance.N88SX;
 const persist=()=>localStorage.setItem(KEY,JSON.stringify(data));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=n=>'$'+Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0});
@@ -20,7 +23,7 @@ const unavailable=tail=>due(tail)||!!(assigned(tail)&&crewById(assigned(tail))?.
 function syncLogs(){
  const seen=new Set(data.processed);let changed=false;
  for(const entry of log()){
-  const id=String(entry.flight||'');if(!id||seen.has(id)||entry.status!=='Completed')continue;
+  const id=String(entry.flight||'');if(!id||seen.has(id)||String(entry.status||'').toLowerCase()!=='completed')continue;
   seen.add(id);data.processed.push(id);changed=true;
   const rev=n(entry.customerTotal,n(entry.revenue)),cost=n(entry.operatingCost)+n(entry.airportFbo)+n(entry.cateringGround)+n(entry.otherExpense);
   data.history.push({flight:id,tail:entry.aircraft,route:entry.route,client:entry.client,rev,cost,profit:rev-cost,date:entry.date});
@@ -73,7 +76,7 @@ function show(){
 const originalAccept=typeof acceptMarket==='function'?acceptMarket:null;
 if(originalAccept){acceptMarket=function(i){const offer=state.marketBoard?.[i],tail=state.selectedAircraft;if(offer&&due(tail)){alert(tail+' is on a maintenance hold. Resolve defects and inspections in Operations Center before accepting this flight.');return}const c=crewById(assigned(tail));if(c&&(c.restUntil&&Date.parse(c.restUntil)>Date.now()||!c.types.includes(fleet()[tail]?.model))){alert('Assigned crew is unavailable or unqualified.');return}return originalAccept.apply(this,arguments)}}
 const originalClose=typeof closeFlight==='function'?closeFlight:null;
-if(originalClose){closeFlight=function(...args){const before=log().length;const result=originalClose.apply(this,args);if(log().length!==before){syncLogs();show()}return result}}
+if(originalClose){closeFlight=function(...args){const before=log().length;const result=originalClose.apply(this,args);if(result&&typeof result.then==='function')return result.then(value=>{if(log().length!==before){syncLogs();show()}return value});if(log().length!==before){syncLogs();show()}return result}}
 setTimeout(show,1900);
 window.sxRealismSuite={refresh:show,canDispatch:tail=>!unavailable(tail),data:()=>data,
  addCrew:(name,types)=>{name=String(name||'').trim();types=String(types||'').toUpperCase().split(/[ ,;]+/).filter(Boolean);if(!name||!types.length)throw Error('Enter a crew name and aircraft qualifications.');data.crew.push({id:'crew-'+Date.now(),name,types,dutyHours:0,restUntil:''});persist();},
