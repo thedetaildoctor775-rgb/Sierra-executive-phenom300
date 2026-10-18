@@ -3,9 +3,7 @@
 
 const HOME_BASE='KMEV';
 const DEFAULT_FLEET={
-  N102LJ:{tail:'N102LJ',type:'Cessna Citation X',model:'C750',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'High-speed / long-range executive charter'},
-  N750SX:{tail:'N750SX',type:'Cessna Citation Longitude',model:'C700',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Super-midsize / long-range executive charter'},
-  N800SX:{tail:'N800SX',type:'Hawker Beechcraft 800XP',model:'H25B',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'Midsize / executive charter',callsign:'SIERRA EXECUTIVE',flightNumber:'SXR135'}
+  N102LJ:{tail:'N102LJ',type:'Cessna Citation X',model:'C750',home:HOME_BASE,location:HOME_BASE,status:'Available',profile:'High-speed executive charter'}
 };
 const ALLOWED_FLEET=new Set(Object.keys(DEFAULT_FLEET));
 
@@ -25,8 +23,13 @@ function ensureFleetFixed(){
   if(Array.isArray(state.protectedOffers))state.protectedOffers.forEach(a=>{if(a.aircraft==='N88SX')a.aircraft='N102LJ';});
 
   state.fleet=state.fleet||{};
+  // Keep removed aircraft records in an archive instead of destroying saved information.
+  state.retiredFleet=state.retiredFleet||{};
   for(const tail of Object.keys(state.fleet)){
-    if(!ALLOWED_FLEET.has(tail)) delete state.fleet[tail];
+    if(!ALLOWED_FLEET.has(tail)){
+      if(!state.retiredFleet[tail])state.retiredFleet[tail]={...state.fleet[tail],retiredAt:new Date().toISOString()};
+      delete state.fleet[tail];
+    }
   }
   for(const [tail,defaults] of Object.entries(DEFAULT_FLEET)){
     const old=state.fleet[tail]||{};
@@ -47,7 +50,8 @@ function ensureFleetFixed(){
   state.homeBase=HOME_BASE;
   state.operatorHomeBase=HOME_BASE;
   if(!state.selectedAircraft||!state.fleet[state.selectedAircraft]) state.selectedAircraft='N102LJ';
-  if(state.activeAircraft&&!state.fleet[state.activeAircraft]) state.activeAircraft=state.selectedAircraft;
+  if(state.activeAircraft&&!state.fleet[state.activeAircraft]) state.activeAircraft='N102LJ';
+  if(state.activeAssignment&&state.activeAssignment.aircraft!=='N102LJ')state.activeAssignment.aircraft='N102LJ';
   return state.fleet;
 }
 
@@ -294,5 +298,5 @@ setTimeout(repairNow,500);
 setTimeout(()=>{repairNow();try{sync();}catch(e){}},1800);
 setTimeout(repairNow,3500);
 
-console.info('Sierra Fleet Sync Fix v5 — Citation X + Hawker + Longitude');
+console.info('Sierra Fleet Sync Fix v6 — Citation X only');
 })();
